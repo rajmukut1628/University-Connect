@@ -7,8 +7,10 @@ use App\Models\Mentorship;
 use App\Models\Message;
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\AISuggestionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Services\ProfileStrengthService;
 
 class DashboardController extends Controller
 {
@@ -23,14 +25,14 @@ class DashboardController extends Controller
                 ? DB::table('jobs')->where($jobOwnerColumn, $user->id)->count()
                 : 0,
 
-            'approved_jobs' => $jobOwnerColumn
+            'approved_jobs' => $jobOwnerColumn && Schema::hasColumn('jobs', 'status')
                 ? DB::table('jobs')
                     ->where($jobOwnerColumn, $user->id)
-                    ->where('status', 'approved')
+                    ->whereIn('status', ['approved', 'active', 'published'])
                     ->count()
                 : 0,
 
-            'pending_jobs' => $jobOwnerColumn
+            'pending_jobs' => $jobOwnerColumn && Schema::hasColumn('jobs', 'status')
                 ? DB::table('jobs')
                     ->where($jobOwnerColumn, $user->id)
                     ->where('status', 'pending')
@@ -41,13 +43,9 @@ class DashboardController extends Controller
                 ? Mentorship::where('mentor_id', $user->id)->count()
                 : 0,
 
-            'unread_messages' => Schema::hasTable('messages') && Schema::hasColumn('messages', 'recipient_id')
-                ? Message::where('recipient_id', $user->id)->whereNull('read_at')->count()
-                : 0,
+            'unread_messages' => $this->getUnreadMessages($user->id),
 
-            'unread_notifications' => Schema::hasTable('notifications') && Schema::hasColumn('notifications', 'user_id')
-                ? Notification::where('user_id', $user->id)->count()
-                : 0,
+            'unread_notifications' => $this->getUnreadNotifications($user->id),
         ];
 
         $myJobs = $jobOwnerColumn
@@ -73,7 +71,12 @@ class DashboardController extends Controller
             : collect();
 
         $contributionScore = $this->calculateContributionScore($stats);
-        $aiSuggestions = $this->generateAiSuggestions($stats, $contributionScore);
+
+        // Real Dynamic AI Suggestions
+        $aiSuggestions = app(AISuggestionService::class)->latestFor($user, 6);
+
+        $profileStrength = app(ProfileStrengthService::class)->analyze($user);
+        $profileScore = $profileStrength['score'];
 
         return view('alumni.dashboard', compact(
             'user',
@@ -82,7 +85,9 @@ class DashboardController extends Controller
             'mentorshipRequests',
             'recommendedStudents',
             'contributionScore',
-            'aiSuggestions'
+            'aiSuggestions',
+            'profileStrength',
+            'profileScore'
         ));
     }
 
@@ -101,6 +106,51 @@ class DashboardController extends Controller
         return null;
     }
 
+    private function getUnreadMessages(int $userId): int
+    {
+        if (!Schema::hasTable('messages')) {
+            return 0;
+        }
+
+        if (Schema::hasColumn('messages', 'recipient_id')) {
+            return Message::where('recipient_id', $userId)
+                ->when(
+                    Schema::hasColumn('messages', 'read_at'),
+                    fn ($q) => $q->whereNull('read_at')
+                )
+                ->count();
+        }
+
+        if (Schema::hasColumn('messages', 'to_user_id')) {
+            return Message::where('to_user_id', $userId)
+                ->when(
+                    Schema::hasColumn('messages', 'read_at'),
+                    fn ($q) => $q->whereNull('read_at')
+                )
+                ->count();
+        }
+
+        return 0;
+    }
+
+    private function getUnreadNotifications(int $userId): int
+    {
+        if (!Schema::hasTable('notifications')) {
+            return 0;
+        }
+
+        if (Schema::hasColumn('notifications', 'user_id')) {
+            return Notification::where('user_id', $userId)
+                ->when(
+                    Schema::hasColumn('notifications', 'read_at'),
+                    fn ($q) => $q->whereNull('read_at')
+                )
+                ->count();
+        }
+
+        return 0;
+    }
+
     private function calculateContributionScore(array $stats): int
     {
         $score = 20;
@@ -111,31 +161,5 @@ class DashboardController extends Controller
         $score += min(($stats['unread_messages'] ?? 0) * 2, 10);
 
         return min($score, 100);
-    }
-
-    private function generateAiSuggestions(array $stats, int $contributionScore): array
-    {
-        $suggestions = [];
-
-        if (($stats['my_jobs'] ?? 0) < 1) {
-            $suggestions[] = 'Post at least one job or internship opportunity for students.';
-        }
-
-        if (($stats['pending_jobs'] ?? 0) > 0) {
-            $suggestions[] = 'Some of your job posts are pending admin approval.';
-        }
-
-        if (($stats['mentorship_requests'] ?? 0) > 0) {
-            $suggestions[] = 'You have mentorship requests waiting for your response.';
-        }
-
-        if ($contributionScore < 60) {
-            $suggestions[] = 'Increase your contribution by posting jobs and mentoring students.';
-        }
-
-        $suggestions[] = 'Share your industry experience with current students.';
-        $suggestions[] = 'Help students improve their CV, GitHub and interview skills.';
-
-        return $suggestions;
     }
 }

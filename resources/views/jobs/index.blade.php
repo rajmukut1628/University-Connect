@@ -93,8 +93,10 @@
             </div>
         @endif
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            @php
+        @php
+            $isAdmin = auth()->check() && auth()->user()->isAdmin();
+
+            if ($isAdmin) {
                 $cards = [
                     [
                         'title' => 'Total Jobs',
@@ -125,10 +127,22 @@
                         'to'    => 'to-fuchsia-600',
                     ],
                 ];
-            @endphp
+            } else {
+                $cards = [
+                    [
+                        'title' => 'Total Jobs',
+                        'value' => $stats['total_jobs'] ?? 0,
+                        'icon'  => 'fa-briefcase',
+                        'from'  => 'from-cyan-400',
+                        'to'    => 'to-blue-600',
+                    ],
+                ];
+            }
+        @endphp
 
+        <div class="grid grid-cols-1 {{ $isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-1' }} gap-6">
             @foreach($cards as $card)
-                <div class="uc-card p-4">
+                <div class="uc-card p-4 {{ !$isAdmin ? 'max-w-sm' : '' }}">
                     <div class="relative z-10 flex items-center justify-between">
                         <div>
                             <p class="text-sm font-bold text-slate-500 dark:text-slate-300">
@@ -147,7 +161,8 @@
                 </div>
             @endforeach
         </div>
-                <div class="uc-card p-4">
+
+        <div class="uc-card p-4">
             <form method="GET"
                   action="{{ route('jobs.index') }}"
                   class="relative z-10 grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -186,8 +201,7 @@
                 </button>
             </form>
         </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
             @forelse($jobs as $job)
                 <div class="uc-card p-4">
                     <div class="relative z-10 flex flex-col h-full">
@@ -196,12 +210,14 @@
                                 <i class="fas fa-briefcase text-2xl text-white"></i>
                             </div>
 
-                            <span class="px-3 py-1 rounded-full text-xs font-black
-                                @if($job->status === 'approved') bg-emerald-500/15 text-emerald-600
-                                @elseif($job->status === 'pending') bg-amber-500/15 text-amber-600
-                                @else bg-red-500/15 text-red-600 @endif">
-                                {{ strtoupper($job->status) }}
-                            </span>
+                            @if(auth()->check() && auth()->user()->isAdmin())
+                                <span class="px-3 py-1 rounded-full text-xs font-black
+                                    @if($job->status === 'approved') bg-emerald-500/15 text-emerald-600
+                                    @elseif($job->status === 'pending') bg-amber-500/15 text-amber-600
+                                    @else bg-red-500/15 text-red-600 @endif">
+                                    {{ strtoupper($job->status) }}
+                                </span>
+                            @endif
                         </div>
 
                         <div class="mt-5">
@@ -252,12 +268,14 @@
                             </a>
                         </div>
 
-                        @if(auth()->user()->isAdmin() && $job->status === 'pending')
+                        @if(auth()->check() && auth()->user()->isAdmin() && $job->status === 'pending')
                             <div class="mt-4 flex gap-2">
                                 <form method="POST" action="{{ route('jobs.approve', $job) }}" class="flex-1">
                                     @csrf
                                     @method('PATCH')
-                                    <button class="w-full rounded-xl bg-emerald-500 py-2 text-white font-black">
+
+                                    <button type="submit"
+                                            class="w-full rounded-xl bg-emerald-500 py-2 text-white font-black hover:bg-emerald-600 transition">
                                         Approve
                                     </button>
                                 </form>
@@ -265,7 +283,9 @@
                                 <form method="POST" action="{{ route('jobs.reject', $job) }}" class="flex-1">
                                     @csrf
                                     @method('PATCH')
-                                    <button class="w-full rounded-xl bg-red-500 py-2 text-white font-black">
+
+                                    <button type="submit"
+                                            class="w-full rounded-xl bg-red-500 py-2 text-white font-black hover:bg-red-600 transition">
                                         Reject
                                     </button>
                                 </form>

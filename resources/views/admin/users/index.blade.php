@@ -5,23 +5,39 @@
 
             <div class="relative z-10">
                 <p class="text-sm uppercase tracking-[0.35em] text-cyan-300 font-black">
-                    Admin Control Center
+                    {{ auth()->user()->role === 'super_admin' ? 'Super Admin Control Center' : 'Admin Control Center' }}
                 </p>
+
                 <h2 class="mt-3 text-4xl lg:text-5xl font-black text-white">
                     User Management
                 </h2>
+
                 <p class="mt-3 text-slate-300 max-w-2xl">
                     Search, monitor, block, unblock and manage all student, alumni and admin accounts.
+                    Super Admin accounts are protected.
                 </p>
             </div>
         </div>
     </x-slot>
+
+    @php
+        $isSuperAdmin = auth()->user()->role === 'super_admin';
+
+        $indexRoute = $isSuperAdmin ? route('superadmin.users.index') : route('admin.users.index');
+        $dashboardRoute = $isSuperAdmin ? route('superadmin.dashboard') : route('admin.dashboard');
+    @endphp
 
     <div class="space-y-8">
 
         @if(session('success'))
             <div class="rounded-2xl bg-emerald-500/15 border border-emerald-500/30 p-4 text-emerald-600 font-bold">
                 {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="rounded-2xl bg-red-500/15 border border-red-500/30 p-4 text-red-600 font-bold">
+                {{ session('error') }}
             </div>
         @endif
 
@@ -34,12 +50,12 @@
         {{-- Stats --}}
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-5">
             @foreach([
-                ['label' => 'Total Users', 'value' => $stats['total'], 'icon' => 'fa-users', 'color' => 'from-cyan-500 to-blue-600'],
-                ['label' => 'Students', 'value' => $stats['students'], 'icon' => 'fa-user-graduate', 'color' => 'from-emerald-500 to-green-600'],
-                ['label' => 'Alumni', 'value' => $stats['alumni'], 'icon' => 'fa-award', 'color' => 'from-amber-500 to-orange-600'],
-                ['label' => 'Admins', 'value' => $stats['admins'], 'icon' => 'fa-user-shield', 'color' => 'from-purple-500 to-fuchsia-600'],
-                ['label' => 'Blocked', 'value' => $stats['blocked'], 'icon' => 'fa-ban', 'color' => 'from-red-500 to-pink-600'],
-                ['label' => 'Inactive', 'value' => $stats['inactive'], 'icon' => 'fa-user-clock', 'color' => 'from-slate-500 to-slate-700'],
+                ['label' => 'Total Users', 'value' => $stats['total'] ?? 0, 'icon' => 'fa-users', 'color' => 'from-cyan-500 to-blue-600'],
+                ['label' => 'Students', 'value' => $stats['students'] ?? 0, 'icon' => 'fa-user-graduate', 'color' => 'from-emerald-500 to-green-600'],
+                ['label' => 'Alumni', 'value' => $stats['alumni'] ?? 0, 'icon' => 'fa-award', 'color' => 'from-amber-500 to-orange-600'],
+                ['label' => 'Admins', 'value' => $stats['admins'] ?? 0, 'icon' => 'fa-user-shield', 'color' => 'from-purple-500 to-fuchsia-600'],
+                ['label' => 'Blocked', 'value' => $stats['blocked'] ?? 0, 'icon' => 'fa-ban', 'color' => 'from-red-500 to-pink-600'],
+                ['label' => 'Inactive', 'value' => $stats['inactive'] ?? 0, 'icon' => 'fa-user-clock', 'color' => 'from-slate-500 to-slate-700'],
             ] as $item)
                 <div class="group rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-5 shadow-2xl hover:-translate-y-2 transition duration-300">
                     <div class="flex items-center justify-between">
@@ -60,28 +76,28 @@
 
         {{-- Search Filter --}}
         <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-6 shadow-2xl">
-            <form method="GET" action="{{ route('admin.users.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <form method="GET" action="{{ $indexRoute }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <input type="text"
                        name="search"
-                       value="{{ $search }}"
+                       value="{{ $search ?? '' }}"
                        placeholder="Search name, email, phone, department..."
                        class="rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
 
                 <select name="role"
                         class="rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
                     <option value="">All Roles</option>
-                    <option value="student" @selected($role === 'student')>Student</option>
-                    <option value="alumni" @selected($role === 'alumni')>Alumni</option>
-                    <option value="admin" @selected($role === 'admin')>Admin</option>
-                    <option value="super_admin" @selected($role === 'super_admin')>Super Admin</option>
+                    <option value="student" @selected(($role ?? '') === 'student')>Student</option>
+                    <option value="alumni" @selected(($role ?? '') === 'alumni')>Alumni</option>
+                    <option value="admin" @selected(($role ?? '') === 'admin')>Admin</option>
+                    <option value="super_admin" @selected(($role ?? '') === 'super_admin')>Super Admin</option>
                 </select>
 
                 <select name="status"
                         class="rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
                     <option value="">All Status</option>
-                    <option value="active" @selected($status === 'active')>Active</option>
-                    <option value="blocked" @selected($status === 'blocked')>Blocked</option>
-                    <option value="inactive" @selected($status === 'inactive')>Inactive</option>
+                    <option value="active" @selected(($status ?? '') === 'active')>Active</option>
+                    <option value="blocked" @selected(($status ?? '') === 'blocked')>Blocked</option>
+                    <option value="inactive" @selected(($status ?? '') === 'inactive')>Inactive</option>
                 </select>
 
                 <button type="submit"
@@ -104,7 +120,7 @@
                     </h3>
                 </div>
 
-                <a href="{{ route('admin.dashboard') }}"
+                <a href="{{ $dashboardRoute }}"
                    class="hidden md:inline-flex px-5 py-3 rounded-2xl bg-slate-950 text-white font-black hover:scale-105 transition">
                     Dashboard
                 </a>
@@ -127,7 +143,7 @@
                             <tr class="hover:bg-slate-50 dark:hover:bg-white/5 transition">
                                 <td class="px-6 py-5">
                                     <div class="flex items-center gap-4">
-                                        @if($userItem->profile_image)
+                                        @if(!empty($userItem->profile_image))
                                             <img src="{{ asset('storage/' . $userItem->profile_image) }}"
                                                  class="h-12 w-12 rounded-2xl object-cover">
                                         @else
@@ -148,7 +164,14 @@
                                 </td>
 
                                 <td class="px-6 py-5">
-                                    <span class="px-4 py-2 rounded-full text-xs font-black bg-indigo-500/10 text-indigo-600">
+                                    <span class="px-4 py-2 rounded-full text-xs font-black
+                                        @if($userItem->role === 'super_admin') bg-amber-500/10 text-amber-500
+                                        @elseif($userItem->role === 'admin') bg-purple-500/10 text-purple-600
+                                        @elseif($userItem->role === 'student') bg-cyan-500/10 text-cyan-600
+                                        @else bg-indigo-500/10 text-indigo-600 @endif">
+                                        @if($userItem->role === 'super_admin')
+                                            <i class="fas fa-crown mr-1"></i>
+                                        @endif
                                         {{ ucwords(str_replace('_', ' ', $userItem->role)) }}
                                     </span>
                                 </td>
@@ -176,36 +199,51 @@
 
                                 <td class="px-6 py-5">
                                     <div class="flex items-center justify-end gap-2">
-                                        @if(!$userItem->is_blocked)
-                                            <form method="POST" action="{{ route('admin.users.block', $userItem) }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit"
-                                                        onclick="return confirm('Block this user?')"
-                                                        class="px-4 py-2 rounded-xl bg-red-500/10 text-red-600 font-black hover:bg-red-500 hover:text-white transition">
-                                                    Block
-                                                </button>
-                                            </form>
+
+                                        @if($userItem->role === 'super_admin')
+                                            <span class="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500/10 text-amber-500 text-sm font-black border border-amber-500/20">
+                                                <i class="fas fa-crown mr-2"></i>
+                                                Protected
+                                            </span>
                                         @else
-                                            <form method="POST" action="{{ route('admin.users.unblock', $userItem) }}">
+                                            @if(!$userItem->is_blocked)
+                                                <form method="POST"
+                                                      action="{{ $isSuperAdmin ? route('superadmin.users.block', $userItem) : route('admin.users.block', $userItem) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+
+                                                    <button type="submit"
+                                                            onclick="return confirm('Block this user?')"
+                                                            class="px-4 py-2 rounded-xl bg-red-500/10 text-red-600 font-black hover:bg-red-500 hover:text-white transition">
+                                                        Block
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <form method="POST"
+                                                      action="{{ $isSuperAdmin ? route('superadmin.users.unblock', $userItem) : route('admin.users.unblock', $userItem) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+
+                                                    <button type="submit"
+                                                            class="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 font-black hover:bg-emerald-500 hover:text-white transition">
+                                                        Unblock
+                                                    </button>
+                                                </form>
+                                            @endif
+
+                                            <form method="POST"
+                                                  action="{{ $isSuperAdmin ? route('superadmin.users.destroy', $userItem) : route('admin.users.destroy', $userItem) }}">
                                                 @csrf
-                                                @method('PATCH')
+                                                @method('DELETE')
+
                                                 <button type="submit"
-                                                        class="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 font-black hover:bg-emerald-500 hover:text-white transition">
-                                                    Unblock
+                                                        onclick="return confirm('Delete this user permanently?')"
+                                                        class="px-4 py-2 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 font-black hover:bg-slate-950 hover:text-white transition">
+                                                    Delete
                                                 </button>
                                             </form>
                                         @endif
 
-                                        <form method="POST" action="{{ route('admin.users.destroy', $userItem) }}">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                    onclick="return confirm('Delete this user permanently?')"
-                                                    class="px-4 py-2 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 font-black hover:bg-slate-950 hover:text-white transition">
-                                                Delete
-                                            </button>
-                                        </form>
                                     </div>
                                 </td>
                             </tr>

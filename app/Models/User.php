@@ -143,6 +143,11 @@ class User extends Authenticatable
     {
         return $this->hasMany(BlockedUser::class, 'user_id');
     }
+    public function aiSuggestions()
+{
+    return $this->hasMany(\App\Models\AISuggestion::class);
+}
+    
 
     /*
     |--------------------------------------------------------------------------
@@ -196,17 +201,22 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
-    public function getProfileImageUrl()
+    public function getProfileImageUrl(): string
     {
-        return $this->profile_image
-            ? asset('storage/' . $this->profile_image)
-            : asset('images/default-avatar.png');
-    }
+        if (empty($this->profile_image)) {
+            return 'https://ui-avatars.com/api/?name=' .
+                urlencode($this->name) .
+                '&background=6366f1&color=ffffff&size=256';
+        }
 
-    public function getCoverImageUrl()
-    {
-        return $this->cover_image
-            ? asset('storage/' . $this->cover_image)
-            : asset('images/default-cover.jpg');
+        if (
+            str_starts_with($this->profile_image, 'http://') ||
+            str_starts_with($this->profile_image, 'https://')
+        ) {
+            return $this->profile_image;
+        }
+
+        return asset('storage/' . ltrim($this->profile_image, '/'));
     }
 }
+

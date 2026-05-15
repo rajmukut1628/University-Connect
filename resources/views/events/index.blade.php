@@ -1,7 +1,9 @@
 <x-app-layout>
     <x-slot name="header">
         @php
-            $isAdminPanel = auth()->check() && in_array(auth()->user()->role, ['admin', 'super_admin']);
+            $user = auth()->user();
+            $isAdminPanel = $user && in_array($user->role, ['admin', 'super_admin']);
+            $isUserPanel = $user && in_array($user->role, ['student', 'alumni']);
         @endphp
 
         <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-emerald-950 to-cyan-950 p-8 shadow-2xl border border-white/10">
@@ -15,15 +17,6 @@
 
                     <h2 class="mt-3 text-4xl lg:text-5xl font-black text-white">
                         {{ $isAdminPanel ? 'Event Requests & Management' : 'University Events' }}
-                        @if(Auth::user()->role === 'alumni' || Auth::user()->isAdmin())
-    <div class="mt-6">
-        <a href="{{ route('events.create') }}"
-           class="inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/15 px-4 py-2.5 text-sm font-black text-white hover:bg-white/20 hover:scale-105 transition-all duration-300">
-            <i class="fas fa-calendar-plus text-emerald-300"></i>
-            <span>Add Event</span>
-        </a>
-    </div>
-@endif
                     </h2>
 
                     <p class="mt-3 text-slate-300 max-w-2xl">
@@ -33,6 +26,17 @@
                             Explore real university events and submit registration requests for admin approval.
                         @endif
                     </p>
+
+                    {{-- Admin Only Add Event --}}
+                    @if($isAdminPanel)
+                        <div class="mt-6">
+                            <a href="{{ route('events.create') }}"
+                               class="inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/15 px-4 py-2.5 text-sm font-black text-white hover:bg-white/20 hover:scale-105 transition-all duration-300">
+                                <i class="fas fa-calendar-plus text-emerald-300"></i>
+                                <span>Add Event</span>
+                            </a>
+                        </div>
+                    @endif
                 </div>
 
                 @if($isAdminPanel)
@@ -196,15 +200,14 @@
                     $isFull = $event->capacity && $participants >= $event->capacity;
                     $isOpen = in_array($event->status, ['active', 'published']);
                 @endphp
-                                <div class="uc-card p-6">
+
+                <div class="uc-card p-6">
                     <div class="relative z-10">
 
-                        {{-- Icon --}}
                         <div class="h-20 w-20 rounded-3xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-xl">
                             <i class="fas fa-calendar-days text-3xl text-white"></i>
                         </div>
 
-                        {{-- Type + Status --}}
                         <div class="mt-6 flex items-center justify-between">
                             <span class="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 text-xs font-black">
                                 {{ ucfirst($event->type ?? 'Event') }}
@@ -215,17 +218,14 @@
                             </span>
                         </div>
 
-                        {{-- Title --}}
                         <h3 class="mt-5 text-2xl font-black text-slate-900 dark:text-white">
                             {{ $event->title }}
                         </h3>
 
-                        {{-- Description --}}
                         <p class="mt-3 text-sm text-slate-500 leading-relaxed">
                             {{ \Illuminate\Support\Str::limit($event->description, 120) }}
                         </p>
 
-                        {{-- Details --}}
                         <div class="mt-5 space-y-3 text-sm text-slate-500">
                             <p>
                                 <i class="fas fa-calendar mr-2 text-emerald-500"></i>
@@ -248,7 +248,6 @@
                             </p>
                         </div>
 
-                        {{-- Action Button --}}
                         <div class="mt-6">
                             @if($isAdminPanel)
                                 <div class="w-full rounded-2xl bg-slate-500/15 text-slate-500 py-3 text-center font-black">

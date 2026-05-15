@@ -32,7 +32,7 @@
                     <div>
                         <label class="font-bold text-slate-700 dark:text-slate-300">Resume Title</label>
                         <input type="text" name="resume_title" value="{{ old('resume_title') }}"
-                               placeholder="Example: Laravel Internship CV"
+                               placeholder="Example: Internship CV"
                                class="mt-2 w-full rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
                         @error('resume_title')
                             <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -43,7 +43,7 @@
                         <label class="font-bold text-slate-700 dark:text-slate-300">Resume File</label>
                         <input type="file" name="resume_file" required
                                class="mt-2 w-full rounded-2xl border border-slate-300 dark:border-white/10 p-3 dark:bg-slate-950 dark:text-white">
-                        <p class="text-xs text-slate-500 mt-2">PDF, DOC, DOCX, TXT — Max 5MB</p>
+                        <p class="text-xs text-slate-500 mt-2">PPT, PDF, DOC, DOCX, TXT — Max 5MB</p>
                         @error('resume_file')
                             <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                         @enderror

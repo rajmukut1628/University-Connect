@@ -362,73 +362,174 @@
             {{-- Right Side --}}
             <div class="space-y-8">
 
-                {{-- Contribution Level --}}
-                <div class="uc-card p-7">
-                    <div class="relative z-10">
-                        <p class="text-sm uppercase tracking-[0.25em] text-yellow-500 font-black">Impact Score</p>
-                        <h3 class="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                            Contribution Level
-                        </h3>
+                {{-- Real AI Profile Strength --}}
+<div class="uc-card p-7">
+    <div class="relative z-10">
+        <p class="text-sm uppercase tracking-[0.25em] text-emerald-400 font-black">
+            Career Score
+        </p>
 
-                        <div class="mt-6 flex items-center justify-center">
-                            <div class="relative h-44 w-44 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 to-fuchsia-600 p-2 uc-float">
-                                <div class="h-full w-full rounded-full bg-slate-950 flex flex-col items-center justify-center text-white">
-                                    <p class="text-5xl font-black">{{ $contributionScore ?? 0 }}%</p>
-                                    <p class="text-xs text-slate-300">
-                                        {{ ($contributionScore ?? 0) >= 80 ? 'High Impact' : 'Growing' }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+        <h3 class="text-2xl font-black text-white mt-1">
+            Profile Strength
+        </h3>
 
-                        <div class="mt-6 h-3 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                            <div class="h-full rounded-full bg-gradient-to-r from-yellow-400 via-orange-500 to-fuchsia-600"
-                                 style="width: {{ $contributionScore ?? 0 }}%">
-                            </div>
-                        </div>
+        @php
+            $realProfileScore = $profileStrength['score'] ?? ($profileScore ?? 0);
+            $profileLevel = $profileStrength['level'] ?? 'Improve';
+            $profileMessage = $profileStrength['message'] ?? 'Complete your profile to improve AI recommendations.';
+            $missingItems = $profileStrength['missing'] ?? [];
+        @endphp
 
-                        <div class="mt-6 space-y-3">
-                            <div class="flex justify-between text-sm font-bold">
-                                <span>Job Support</span>
-                                <span class="text-emerald-500">{{ ($stats['my_jobs'] ?? 0) > 0 ? 'Active' : 'Start' }}</span>
-                            </div>
-
-                            <div class="flex justify-between text-sm font-bold">
-                                <span>Mentorship</span>
-                                <span class="text-yellow-500">{{ ($stats['mentorship_requests'] ?? 0) > 0 ? 'Active' : 'Waiting' }}</span>
-                            </div>
-
-                            <div class="flex justify-between text-sm font-bold">
-                                <span>Network</span>
-                                <span class="text-purple-500">Growing</span>
-                            </div>
-                        </div>
-                    </div>
+        <div class="mt-6 flex items-center justify-center">
+            <div class="relative h-44 w-44 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2">
+                <div class="h-full w-full rounded-full bg-slate-950 flex flex-col items-center justify-center text-white">
+                    <p class="text-5xl font-black">
+                        {{ $realProfileScore }}%
+                    </p>
+                    <p class="text-xs text-slate-300">
+                        {{ $profileLevel }}
+                    </p>
                 </div>
+            </div>
+        </div>
+
+        <div class="mt-6 h-3 w-full rounded-full bg-slate-800 overflow-hidden">
+            <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 via-cyan-400 to-purple-500"
+                 style="width: {{ $realProfileScore }}%">
+            </div>
+        </div>
+
+        <p class="mt-5 text-sm text-slate-300 leading-relaxed">
+            {{ $profileMessage }}
+        </p>
+
+        @if(!empty($missingItems))
+            <div class="mt-5 rounded-2xl bg-slate-950/60 border border-white/10 p-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-amber-300 font-black mb-3">
+                    AI Detected Missing
+                </p>
+
+                <div class="flex flex-wrap gap-2">
+                    @foreach(array_slice($missingItems, 0, 5) as $item)
+                        <span class="px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 text-xs font-bold">
+                            {{ $item }}
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        <a href="{{ route('profile.edit') }}"
+           class="mt-6 w-full inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 py-3 text-white font-black shadow-xl hover:scale-105 transition">
+            <i class="fas fa-user-check mr-2"></i>
+            Improve Profile
+        </a>
+    </div>
+</div>
 
                 {{-- AI Suggestions --}}
-                <div class="uc-card p-7">
-                    <div class="relative z-10">
-                        <p class="text-sm uppercase tracking-[0.25em] text-cyan-500 font-black">AI Suggestions</p>
-                        <h3 class="text-2xl font-black text-slate-900 dark:text-white mt-1 mb-5">
-                            What to do next
-                        </h3>
+<div class="uc-card p-7">
+    <div class="relative z-10">
+        <div class="flex items-center justify-between gap-4 mb-6">
+            <div>
+                <p class="text-sm uppercase tracking-[0.25em] text-cyan-500 font-black">
+                    AI Suggestions
+                </p>
+                <h3 class="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                    What to do next
+                </h3>
+                <p class="text-sm text-slate-500 mt-2">
+                    Personalized recommendations generated from your profile,
+                    contribution activity, mentorship, and job posting history.
+                </p>
+            </div>
 
-                        <div class="space-y-4">
-                            @foreach($aiSuggestions ?? [] as $suggestion)
-                                <div class="rounded-2xl bg-white/5 border border-white/10 p-4">
-                                    <p class="font-black text-slate-900 dark:text-white">
-                                        <i class="fas fa-wand-magic-sparkles text-cyan-500 mr-2"></i>
-                                        AI Tip
-                                    </p>
-                                    <p class="text-sm text-slate-500 mt-1">
-                                        {{ $suggestion }}
-                                    </p>
+            <div class="h-14 w-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center shadow-xl uc-float">
+                <i class="fas fa-wand-magic-sparkles text-white text-xl"></i>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            @forelse($aiSuggestions ?? [] as $suggestion)
+                @php
+                    $title = is_array($suggestion)
+                        ? ($suggestion['title'] ?? 'AI Suggestion')
+                        : ($suggestion->title ?? 'AI Suggestion');
+
+                    $description = is_array($suggestion)
+                        ? ($suggestion['description'] ?? '')
+                        : ($suggestion->description ?? '');
+
+                    $category = is_array($suggestion)
+                        ? ($suggestion['category'] ?? 'career')
+                        : ($suggestion->category ?? 'career');
+
+                    $icon = is_array($suggestion)
+                        ? ($suggestion['icon'] ?? 'fa-wand-magic-sparkles')
+                        : ($suggestion->icon ?? 'fa-wand-magic-sparkles');
+
+                    $score = is_array($suggestion)
+                        ? (int) ($suggestion['score'] ?? 70)
+                        : (int) ($suggestion->score ?? 70);
+
+                    $score = min(max($score, 0), 100);
+                @endphp
+
+                <div class="group rounded-3xl bg-white/5 border border-white/10 p-5 hover:border-cyan-400/40 hover:bg-white/10 transition-all duration-300">
+                    <div class="flex items-start gap-4">
+                        <div class="h-12 w-12 rounded-2xl bg-cyan-500/15 flex items-center justify-center shrink-0">
+                            <i class="fas {{ $icon }} text-cyan-400"></i>
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-3">
+                                <h4 class="font-black text-slate-900 dark:text-white leading-snug">
+                                    {{ $title }}
+                                </h4>
+
+                                <span class="shrink-0 px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-500 text-[10px] font-black uppercase">
+                                    {{ $category }}
+                                </span>
+                            </div>
+
+                            <p class="text-sm text-slate-500 mt-2 leading-relaxed">
+                                {{ $description }}
+                            </p>
+
+                            <div class="mt-4 flex items-center gap-3">
+                                <div class="flex-1 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                                    <div
+                                        class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-purple-600"
+                                        style="width: {{ $score }}%">
+                                    </div>
                                 </div>
-                            @endforeach
+
+                                <span class="text-xs font-bold text-slate-500">
+                                    {{ $score }}%
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
+            @empty
+                <div class="rounded-3xl border border-dashed border-slate-300 dark:border-white/10 p-8 text-center">
+                    <div class="mx-auto h-16 w-16 rounded-3xl bg-cyan-500/10 flex items-center justify-center">
+                        <i class="fas fa-robot text-cyan-500 text-2xl"></i>
+                    </div>
+
+                    <h4 class="mt-4 font-black text-slate-900 dark:text-white">
+                        No AI Suggestions Yet
+                    </h4>
+
+                    <p class="mt-2 text-sm text-slate-500">
+                        Complete your profile, post jobs, and engage in mentorship
+                        to receive smarter AI recommendations.
+                    </p>
+                </div>
+            @endforelse
+        </div>
+    </div>
+</div>
 
                 {{-- Recommended Students --}}
                 <div class="uc-card p-7">

@@ -23,11 +23,7 @@ class ResumeAnalysisController extends Controller
             ? $this->getMatchedJobs($latestAnalysis->detected_skills ?? [])
             : collect();
 
-        return view('resume-analyzer.index', compact(
-            'analyses',
-            'latestAnalysis',
-            'matchedJobs'
-        ));
+        return view('resume-analyzer.index', compact('analyses', 'latestAnalysis', 'matchedJobs'));
     }
 
     public function store(Request $request)
@@ -47,7 +43,7 @@ class ResumeAnalysisController extends Controller
 
         ResumeAnalysis::create([
             'user_id' => auth()->id(),
-            'resume_title' => $request->resume_title ?? 'My Resume',
+            'resume_title' => $request->resume_title ?: 'My Resume',
             'original_file_name' => $file->getClientOriginalName(),
             'file_path' => $path,
             'file_type' => $file->getClientOriginalExtension(),
@@ -88,7 +84,7 @@ class ResumeAnalysisController extends Controller
 
         $skills = collect($skills)
             ->filter()
-            ->map(fn ($skill) => strtolower($skill))
+            ->map(fn ($skill) => strtolower(trim($skill)))
             ->values()
             ->toArray();
 
@@ -96,7 +92,13 @@ class ResumeAnalysisController extends Controller
             return collect();
         }
 
-        $jobs = Job::where('status', 'approved')
+        $jobsQuery = Job::query();
+
+        if (Schema::hasColumn('jobs', 'status')) {
+            $jobsQuery->where('status', 'approved');
+        }
+
+        $jobs = $jobsQuery
             ->latest()
             ->take(20)
             ->get();
@@ -113,7 +115,7 @@ class ResumeAnalysisController extends Controller
             $matchedSkills = [];
 
             foreach ($skills as $skill) {
-                if (Str::contains($jobText, $skill)) {
+                if ($skill !== '' && Str::contains($jobText, $skill)) {
                     $matchedSkills[] = ucfirst($skill);
                 }
             }
@@ -123,7 +125,7 @@ class ResumeAnalysisController extends Controller
                 : 0;
 
             $job->match_score = min($matchScore, 100);
-            $job->matched_skills = $matchedSkills;
+            $job->matched_skills = array_unique($matchedSkills);
 
             return $job;
         })

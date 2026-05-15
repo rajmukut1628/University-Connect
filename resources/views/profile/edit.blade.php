@@ -11,9 +11,6 @@
 
             <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                 <div>
-                    <p class="text-sm uppercase tracking-[0.35em] text-indigo-300 font-bold">
-                        Ultra Premium Profile
-                    </p>
 
                     <h2 class="mt-3 text-4xl lg:text-5xl font-black text-white">
                         {{ $user->name }}
@@ -68,8 +65,9 @@
                 <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-7 shadow-2xl">
                     <div class="text-center">
                         @if($user->profile_image)
-                            <img src="{{ asset('storage/' . $user->profile_image) }}"
-                                 class="mx-auto h-28 w-28 rounded-3xl object-cover border-4 border-white shadow-2xl">
+                        <img src="{{ $user->getProfileImageUrl() }}"
+                            alt="{{ $user->name }}"
+                             class="mx-auto h-28 w-28 rounded-3xl object-cover border-4 border-white shadow-2xl">
                         @else
                             <div class="mx-auto h-28 w-28 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-4xl font-black shadow-2xl">
                                 {{ strtoupper(substr($user->name, 0, 1)) }}
@@ -94,30 +92,96 @@
 
                 {{-- Suggestions --}}
                 @if(!$isAdmin)
-                    <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-7 shadow-2xl">
-                        <p class="text-sm uppercase tracking-[0.25em] text-cyan-500 font-black">
-                            AI Suggestions
-                        </p>
+                    <div class="rounded-[2rem] border border-white/15 bg-white/10 backdrop-blur-2xl p-7 shadow-2xl">
+    <p class="text-sm uppercase tracking-[0.35em] text-cyan-400 font-black">
+        AI Suggestions
+    </p>
 
-                        <h3 class="mt-2 text-2xl font-black text-slate-900 dark:text-white">
-                            Profile Improvement
-                        </h3>
+    <h3 class="mt-3 text-3xl font-black text-white">
+        Profile Improvement
+    </h3>
 
-                        <div class="mt-5 space-y-3">
-                            @forelse($profileSuggestions ?? [] as $suggestion)
-                                <div class="rounded-2xl bg-cyan-500/10 border border-cyan-500/20 p-4">
-                                    <p class="text-sm text-slate-600 dark:text-slate-300">
-                                        <i class="fas fa-wand-magic-sparkles text-cyan-500 mr-2"></i>
-                                        {{ $suggestion }}
-                                    </p>
-                                </div>
-                            @empty
-                                <p class="text-sm text-slate-500">
-                                    No suggestions available.
-                                </p>
-                            @endforelse
-                        </div>
-                    </div>
+    @php
+        $score = $profileStrength['score'] ?? 0;
+        $level = $profileStrength['level'] ?? 'Improve';
+        $message = $profileStrength['message'] ?? 'Complete your profile to improve AI recommendations.';
+        $missingItems = $profileStrength['missing'] ?? [];
+        $completedItems = $profileStrength['completed'] ?? [];
+    @endphp
+
+    <div class="mt-6 rounded-3xl bg-slate-950/70 border border-white/10 p-5">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <p class="text-sm text-slate-400">AI Verified Score</p>
+                <h4 class="text-4xl font-black text-white mt-1">
+                    {{ $score }}%
+                </h4>
+                <p class="text-sm text-cyan-300 font-bold mt-1">
+                    {{ $level }}
+                </p>
+            </div>
+
+            <div class="h-16 w-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center shadow-xl">
+                <i class="fas fa-robot text-white text-2xl"></i>
+            </div>
+        </div>
+
+        <div class="mt-5 h-3 rounded-full bg-white/10 overflow-hidden">
+            <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500"
+                 style="width: {{ $score }}%">
+            </div>
+        </div>
+
+        <p class="mt-4 text-sm text-slate-300 leading-relaxed">
+            {{ $message }}
+        </p>
+    </div>
+
+    <div class="mt-6 space-y-3">
+        @forelse($missingItems as $item)
+            <div class="rounded-2xl bg-cyan-500/10 border border-cyan-400/20 p-4 flex items-start gap-3">
+                <div class="h-9 w-9 rounded-xl bg-cyan-400/15 flex items-center justify-center shrink-0">
+                    <i class="fas fa-wand-magic-sparkles text-cyan-300"></i>
+                </div>
+
+                <div>
+                    <p class="font-black text-white">
+                        Add {{ $item }}
+                    </p>
+                    <p class="text-sm text-slate-400 mt-1">
+                        AI detected this information is missing. Adding it will improve your profile strength and recommendation quality.
+                    </p>
+                </div>
+            </div>
+        @empty
+            <div class="rounded-2xl bg-emerald-500/10 border border-emerald-400/20 p-5 text-center">
+                <i class="fas fa-circle-check text-emerald-300 text-2xl"></i>
+                <h4 class="mt-3 text-white font-black">
+                    Excellent Profile
+                </h4>
+                <p class="mt-2 text-sm text-slate-300">
+                    AI verified that your important profile fields are completed.
+                </p>
+            </div>
+        @endforelse
+    </div>
+
+    @if(!empty($completedItems))
+        <div class="mt-6 rounded-2xl bg-white/5 border border-white/10 p-4">
+            <p class="text-xs uppercase tracking-[0.25em] text-emerald-300 font-black mb-3">
+                Completed
+            </p>
+
+            <div class="flex flex-wrap gap-2">
+                @foreach($completedItems as $item)
+                    <span class="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 text-xs font-bold">
+                        {{ $item }}
+                    </span>
+                @endforeach
+            </div>
+        </div>
+    @endif
+</div>
                 @endif
 
                 {{-- Role Card --}}
@@ -237,17 +301,6 @@
                                    accept="image/*"
                                    class="mt-2 w-full rounded-2xl border border-slate-300 dark:border-white/10 p-3 dark:bg-slate-950 dark:text-white">
                             @error('profile_image')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label class="font-bold text-slate-700 dark:text-slate-300">Cover Image</label>
-                            <input type="file"
-                                   name="cover_image"
-                                   accept="image/*"
-                                   class="mt-2 w-full rounded-2xl border border-slate-300 dark:border-white/10 p-3 dark:bg-slate-950 dark:text-white">
-                            @error('cover_image')
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
                         </div>

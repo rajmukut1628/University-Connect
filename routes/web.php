@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
-use App\Http\Controllers\CallController;
+
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\JobController;
@@ -14,30 +14,33 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ResumeAnalysisController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\DonationContributionController;
+use App\Http\Controllers\DonationManualPaymentController;
 use App\Http\Controllers\NewsfeedController;
 use App\Http\Controllers\FeedActionController;
-use App\Http\Controllers\DonationManualPaymentController;
+use App\Http\Controllers\CallController;
+use App\Http\Controllers\AIController;
+use App\Http\Controllers\AskAIController;
 
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Admin\VerifiedUserController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\VerificationController;
 
+use App\Http\Controllers\SuperAdmin\AdminController;
+use App\Http\Controllers\SuperAdmin\VerifiedUserController as SuperAdminVerifiedUserController;
+
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Alumni\DashboardController as AlumniDashboardController;
-
-use App\Http\Controllers\SuperAdmin\AdminController;
+use App\Http\Controllers\AlumniConversionController;
 
 /*
 |--------------------------------------------------------------------------
-| Public Home
+| Home
 |--------------------------------------------------------------------------
 */
 
 Route::get('/', function () {
     $homeStats = [
         'students' => User::where('role', 'student')->count(),
-
         'alumni' => User::where('role', 'alumni')->count(),
 
         'jobs' => Schema::hasTable('job_postings')
@@ -58,7 +61,6 @@ Route::get('/', function () {
     return view('welcome', compact('homeStats'));
 })->name('home');
 
-
 /*
 |--------------------------------------------------------------------------
 | Authenticated Routes
@@ -67,35 +69,235 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
 
-Route::middleware(['auth'])->group(function () {
-
- Route::post('/donations/{donation}/manual-payment', [DonationManualPaymentController::class, 'store'])
-        ->name('donations.manual-payment');
-        Route::delete('/donations/{donation}', [DonationController::class, 'destroy'])
-    ->middleware('auth')
-    ->name('donations.destroy');
-
-/*
-|--------------------------------------------------------------------------
-| Newsfeed Like / Comment / Share Routes
-|--------------------------------------------------------------------------
-*/
-
-Route::post('/newsfeed/like', [FeedActionController::class, 'like'])
-    ->name('newsfeed.like');
-
-Route::post('/newsfeed/comment', [FeedActionController::class, 'comment'])
-    ->name('newsfeed.comment');
-
-Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
-    ->name('newsfeed.share');
     /*
     |--------------------------------------------------------------------------
-    | Existing Routes
+    | Main Dashboard Redirect
     |--------------------------------------------------------------------------
     */
 
-    // Messages routes
+    Route::get('/dashboard', function () {
+        $user = auth()->user();
+
+        if ($user->is_blocked) {
+            auth()->logout();
+
+            return redirect()->route('login')->withErrors([
+                'email' => 'Your account has been blocked.',
+            ]);
+        }
+
+        if (!$user->is_active) {
+            auth()->logout();
+
+            return redirect()->route('login')->withErrors([
+                'email' => 'Your account is not active yet.',
+            ]);
+        }
+
+        return match ($user->role) {
+            'super_admin' => redirect()->route('superadmin.dashboard'),
+            'admin'       => redirect()->route('admin.dashboard'),
+            'student'     => redirect()->route('student.dashboard'),
+            'alumni'      => redirect()->route('alumni.dashboard'),
+            default       => redirect()->route('home'),
+        };
+    })->name('dashboard');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Alumni Conversion System
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware(['role:student'])->group(function () {
+        Route::get('/alumni-conversion/apply', [AlumniConversionController::class, 'create'])
+            ->name('alumni-conversion.create');
+
+        Route::post('/alumni-conversion/apply', [AlumniConversionController::class, 'store'])
+            ->name('alumni-conversion.store');
+    });
+
+    Route::middleware(['role:admin,super_admin'])->group(function () {
+        Route::get('/alumni-conversion/requests', [AlumniConversionController::class, 'index'])
+            ->name('alumni-conversion.index');
+
+        Route::patch('/alumni-conversion/{conversionRequest}/approve', [AlumniConversionController::class, 'approve'])
+            ->name('alumni-conversion.approve');
+
+        Route::patch('/alumni-conversion/{conversionRequest}/reject', [AlumniConversionController::class, 'reject'])
+            ->name('alumni-conversion.reject');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Super Admin Routes
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware(['role:super_admin'])
+        ->prefix('superadmin')
+        ->name('superadmin.')
+        ->group(function () {
+
+            Route::get('/dashboard', [AdminDashboardController::class, 'index'])
+                ->name('dashboard');
+
+            Route::post('/generate-ai-report', [AdminDashboardController::class, 'generateAiReport'])
+                ->name('generate-ai-report');
+
+            Route::get('/verified-users', [SuperAdminVerifiedUserController::class, 'index'])
+                ->name('verified-users.index');
+
+            Route::post('/verified-users', [SuperAdminVerifiedUserController::class, 'store'])
+                ->name('verified-users.store');
+
+            Route::post('/verified-users/bulk-store', [SuperAdminVerifiedUserController::class, 'bulkStore'])
+                ->name('verified-users.bulk-store');
+
+            Route::post('/verified-users/bulk-preview', [SuperAdminVerifiedUserController::class, 'bulkPreview'])
+                ->name('verified-users.bulk-preview');
+
+            Route::post('/verified-users/bulk-confirm', [SuperAdminVerifiedUserController::class, 'bulkConfirm'])
+                ->name('verified-users.bulk-confirm');
+
+            Route::delete('/verified-users/{verifiedUser}', [SuperAdminVerifiedUserController::class, 'destroy'])
+                ->name('verified-users.destroy');
+
+            Route::get('/admins/create', [AdminController::class, 'create'])
+                ->name('admins.create');
+
+            Route::post('/admins', [AdminController::class, 'store'])
+                ->name('admins.store');
+
+            Route::get('/users', [UserManagementController::class, 'index'])
+                ->name('users.index');
+
+            Route::patch('/users/{user}/block', [UserManagementController::class, 'block'])
+                ->name('users.block');
+
+            Route::patch('/users/{user}/unblock', [UserManagementController::class, 'unblock'])
+                ->name('users.unblock');
+
+            Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])
+                ->name('users.destroy');
+
+            Route::get('/verification', [VerificationController::class, 'index'])
+                ->name('verification.index');
+
+            Route::patch('/verification/{user}/approve', [VerificationController::class, 'approve'])
+                ->name('verification.approve');
+
+            Route::patch('/verification/{user}/reject', [VerificationController::class, 'reject'])
+                ->name('verification.reject');
+        });
+            /*
+    |--------------------------------------------------------------------------
+    | Admin Routes
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware(['role:admin'])
+        ->prefix('admin')
+        ->name('admin.')
+        ->group(function () {
+
+            Route::get('/dashboard', [AdminDashboardController::class, 'index'])
+                ->name('dashboard');
+
+            Route::post('/generate-ai-report', [AdminDashboardController::class, 'generateAiReport'])
+                ->name('generate-ai-report');
+
+            Route::get('/users', [UserManagementController::class, 'index'])
+                ->name('users.index');
+
+            Route::patch('/users/{user}/block', [UserManagementController::class, 'block'])
+                ->name('users.block');
+
+            Route::patch('/users/{user}/unblock', [UserManagementController::class, 'unblock'])
+                ->name('users.unblock');
+
+            Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])
+                ->name('users.destroy');
+
+            Route::get('/verification', [VerificationController::class, 'index'])
+                ->name('verification.index');
+
+            Route::patch('/verification/{user}/approve', [VerificationController::class, 'approve'])
+                ->name('verification.approve');
+
+            Route::patch('/verification/{user}/reject', [VerificationController::class, 'reject'])
+                ->name('verification.reject');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Student Routes
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware(['role:student'])
+        ->prefix('student')
+        ->name('student.')
+        ->group(function () {
+
+            Route::get('/dashboard', [StudentDashboardController::class, 'index'])
+                ->name('dashboard');
+
+            Route::post('/ai-study-assistant', [AIController::class, 'ask'])
+                ->name('ai.study.assistant');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Alumni Routes
+    |--------------------------------------------------------------------------
+    */
+
+    Route::middleware(['role:alumni'])
+        ->prefix('alumni')
+        ->name('alumni.')
+        ->group(function () {
+
+            Route::get('/dashboard', [AlumniDashboardController::class, 'index'])
+                ->name('dashboard');
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ask AI
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/ask-ai', [AskAIController::class, 'index'])
+        ->name('ask-ai.index');
+
+    Route::post('/ask-ai/ask', [AskAIController::class, 'ask'])
+        ->name('ask-ai.ask');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Newsfeed
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/newsfeed', [NewsfeedController::class, 'index'])
+        ->name('newsfeed.index');
+
+    Route::post('/newsfeed/like', [FeedActionController::class, 'like'])
+        ->name('newsfeed.like');
+
+    Route::post('/newsfeed/comment', [FeedActionController::class, 'comment'])
+        ->name('newsfeed.comment');
+
+    Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
+        ->name('newsfeed.share');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Messages
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/messages', [MessageController::class, 'index'])
         ->name('messages.index');
 
@@ -113,7 +315,7 @@ Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
 
     /*
     |--------------------------------------------------------------------------
-    | Real WebRTC Call System
+    | Calls
     |--------------------------------------------------------------------------
     */
 
@@ -144,162 +346,9 @@ Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
     Route::post('/calls/{call}/end', [CallController::class, 'end'])
         ->name('calls.end');
 
-});
     /*
     |--------------------------------------------------------------------------
-    | Main Dashboard Redirect
-    |--------------------------------------------------------------------------
-    */
-
-    Route::get('/dashboard', function () {
-        $user = auth()->user();
-
-        if ($user->is_blocked) {
-            auth()->logout();
-
-            return redirect()->route('login')->withErrors([
-                'email' => 'Your account has been blocked.',
-            ]);
-        }
-
-        if (!$user->is_active) {
-            auth()->logout();
-
-            return redirect()->route('login')->withErrors([
-                'email' => 'Your account is not active yet.',
-            ]);
-        }
-
-        return match ($user->role) {
-            'super_admin' => redirect()->route('admin.dashboard'),
-            'admin' => redirect()->route('admin.dashboard'),
-            'student' => redirect()->route('student.dashboard'),
-            'alumni' => redirect()->route('alumni.dashboard'),
-            default => redirect()->route('home'),
-        };
-    })->name('dashboard');
-
-
-
-
-    // ===============================
-    // NEWSFEED ROUTE
-    // ===============================
-    Route::get('/newsfeed', [NewsfeedController::class, 'index'])
-        ->name('newsfeed.index');
-    /*
-    |--------------------------------------------------------------------------
-    | Admin + Super Admin Dashboard
-    |--------------------------------------------------------------------------
-    */
-
-    Route::middleware('role:admin,super_admin')
-        ->prefix('admin')
-        ->name('admin.')
-        ->group(function () {
-
-            Route::get('/dashboard', [AdminDashboardController::class, 'index'])
-                ->name('dashboard');
-
-            Route::get('/verified-users', [VerifiedUserController::class, 'index'])
-                ->name('verified-users.index');
-
-            Route::post('/verified-users/import', [VerifiedUserController::class, 'import'])
-                ->name('verified-users.import');
-
-            Route::delete('/verified-users/{verifiedUser}', [VerifiedUserController::class, 'destroy'])
-                ->name('verified-users.destroy');
-
-            /*
-            |--------------------------------------------------------------------------
-            | User Management
-            |--------------------------------------------------------------------------
-            */
-
-            Route::get('/users', [UserManagementController::class, 'index'])
-                ->name('users.index');
-
-            Route::patch('/users/{user}/block', [UserManagementController::class, 'block'])
-                ->name('users.block');
-
-            Route::patch('/users/{user}/unblock', [UserManagementController::class, 'unblock'])
-                ->name('users.unblock');
-
-            Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])
-                ->name('users.destroy');
-
-            /*
-            |--------------------------------------------------------------------------
-            | Verification
-            |--------------------------------------------------------------------------
-            */
-
-            Route::get('/verification', [VerificationController::class, 'index'])
-                ->name('verification.index');
-
-            Route::patch('/verification/{user}/approve', [VerificationController::class, 'approve'])
-                ->name('verification.approve');
-
-            Route::patch('/verification/{user}/reject', [VerificationController::class, 'reject'])
-                ->name('verification.reject');
-        });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Super Admin Only - Admin Management
-    |--------------------------------------------------------------------------
-    */
-
-    Route::middleware('role:super_admin')
-        ->prefix('super-admin')
-        ->name('superadmin.')
-        ->group(function () {
-
-            Route::get('/admins/create', [AdminController::class, 'create'])
-                ->name('admins.create');
-
-            Route::post('/admins', [AdminController::class, 'store'])
-                ->name('admins.store');
-        });
-            /*
-    |--------------------------------------------------------------------------
-    | Student Dashboard
-    |--------------------------------------------------------------------------
-    */
-
-    Route::middleware('role:student')
-        ->prefix('student')
-        ->name('student.')
-        ->group(function () {
-
-            Route::get('/dashboard', [StudentDashboardController::class, 'index'])
-                ->name('dashboard');
-
-            Route::post('/ai-study-assistant', [StudentDashboardController::class, 'aiStudyAssistant'])
-                ->name('ai.study.assistant');
-        });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Alumni Dashboard
-    |--------------------------------------------------------------------------
-    */
-
-    Route::middleware('role:alumni')
-        ->prefix('alumni')
-        ->name('alumni.')
-        ->group(function () {
-
-            Route::get('/dashboard', [AlumniDashboardController::class, 'index'])
-                ->name('dashboard');
-        });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Donation Campaign System
+    | Donations
     |--------------------------------------------------------------------------
     */
 
@@ -327,14 +376,16 @@ Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
     Route::post('/donations/{donation}/contribute', [DonationContributionController::class, 'store'])
         ->name('donations.contribute');
 
+    Route::post('/donations/{donation}/manual-payment', [DonationManualPaymentController::class, 'store'])
+        ->name('donations.manual-payment');
 
     /*
     |--------------------------------------------------------------------------
-    | AI Resume Analyzer
+    | Resume Analyzer
     |--------------------------------------------------------------------------
     */
 
-    Route::middleware('role:student')->group(function () {
+    Route::middleware(['role:student,alumni'])->group(function () {
 
         Route::get('/resume-analyzer', [ResumeAnalysisController::class, 'index'])
             ->name('resume-analyzer.index');
@@ -346,17 +397,16 @@ Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
             ->name('resume-analyzer.destroy');
     });
 
-
     /*
     |--------------------------------------------------------------------------
-    | Premium Job Portal
+    | Jobs
     |--------------------------------------------------------------------------
     */
 
     Route::get('/jobs', [JobController::class, 'index'])
         ->name('jobs.index');
 
-    Route::middleware('role:alumni')->group(function () {
+    Route::middleware(['role:alumni'])->group(function () {
 
         Route::get('/jobs/create', [JobController::class, 'create'])
             ->name('jobs.create');
@@ -368,13 +418,13 @@ Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
             ->name('jobs.my');
     });
 
-    Route::middleware('role:student')->group(function () {
+    Route::middleware(['role:student'])->group(function () {
 
         Route::post('/jobs/{job}/apply', [JobController::class, 'apply'])
             ->name('jobs.apply');
     });
 
-    Route::middleware('role:admin,super_admin')->group(function () {
+    Route::middleware(['role:admin,super_admin'])->group(function () {
 
         Route::patch('/jobs/{job}/approve', [JobController::class, 'approve'])
             ->name('jobs.approve');
@@ -386,14 +436,13 @@ Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
     Route::get('/jobs/{job}', [JobController::class, 'show'])
         ->name('jobs.show');
 
-
     /*
     |--------------------------------------------------------------------------
-    | Premium Mentorship System
+    | Mentorship
     |--------------------------------------------------------------------------
     */
 
-    Route::middleware('role:student')->group(function () {
+    Route::middleware(['role:student'])->group(function () {
 
         Route::get('/alumni-mentors', [MentorshipController::class, 'index'])
             ->name('mentors.index');
@@ -402,7 +451,7 @@ Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
             ->name('mentors.request');
     });
 
-    Route::middleware('role:alumni')->group(function () {
+    Route::middleware(['role:alumni'])->group(function () {
 
         Route::get('/mentorship-requests', [MentorshipController::class, 'myRequests'])
             ->name('mentors.requests');
@@ -413,33 +462,32 @@ Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
         Route::patch('/mentorships/{mentorship}/reject', [MentorshipController::class, 'reject'])
             ->name('mentors.reject');
     });
-        /*
+
+    /*
     |--------------------------------------------------------------------------
-    | Premium Event System
+    | Events
     |--------------------------------------------------------------------------
     */
 
-    // Public Events List
     Route::get('/events', [EventController::class, 'index'])
         ->name('events.index');
 
-    // Alumni + Admin + Super Admin can create events
-    // Alumni submissions will be stored with status = pending
-    // Admin/Super Admin can publish immediately
-    Route::get('/events/create', [EventController::class, 'create'])
-        ->name('events.create');
+    Route::middleware(['role:alumni,admin,super_admin'])->group(function () {
 
-    Route::post('/events', [EventController::class, 'store'])
-        ->name('events.store');
+        Route::get('/events/create', [EventController::class, 'create'])
+            ->name('events.create');
 
-    // Students and Alumni can register for events
-    Route::middleware('role:student,alumni')->group(function () {
+        Route::post('/events', [EventController::class, 'store'])
+            ->name('events.store');
+    });
+
+    Route::middleware(['role:student,alumni'])->group(function () {
+
         Route::post('/events/{event}/register', [EventController::class, 'register'])
             ->name('events.register');
     });
 
-    // Admin/Super Admin approval for event participants
-    Route::middleware('role:admin,super_admin')->group(function () {
+    Route::middleware(['role:admin,super_admin'])->group(function () {
 
         Route::get('/admin/event-participants/pending', [EventController::class, 'pendingParticipants'])
             ->name('event.participants.pending');
@@ -451,48 +499,9 @@ Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
             ->name('event.participants.reject');
     });
 
-
     /*
     |--------------------------------------------------------------------------
-    | Premium Messaging System
-    |--------------------------------------------------------------------------
-    */
-
- /*
-|--------------------------------------------------------------------------
-| Premium Messaging System
-|--------------------------------------------------------------------------
-*/
-
-Route::get('/messages', [MessageController::class, 'index'])
-    ->name('messages.index');
-
-Route::get('/messages/{user}', [MessageController::class, 'show'])
-    ->name('messages.show');
-
-Route::post('/messages/{user}', [MessageController::class, 'store'])
-    ->name('messages.store');
-
-/*
-|--------------------------------------------------------------------------
-| Edit Existing Message
-|--------------------------------------------------------------------------
-*/
-Route::patch('/messages/message/{message}', [MessageController::class, 'update'])
-    ->name('messages.update');
-
-/*
-|--------------------------------------------------------------------------
-| Delete Message
-|--------------------------------------------------------------------------
-*/
-Route::delete('/messages/message/{message}', [MessageController::class, 'destroy'])
-    ->name('messages.destroy');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Premium Notifications
+    | Notifications
     |--------------------------------------------------------------------------
     */
 
@@ -505,10 +514,9 @@ Route::delete('/messages/message/{message}', [MessageController::class, 'destroy
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])
         ->name('notifications.readAll');
 
-
     /*
     |--------------------------------------------------------------------------
-    | Profile Routes
+    | Profile
     |--------------------------------------------------------------------------
     */
 
@@ -522,10 +530,9 @@ Route::delete('/messages/message/{message}', [MessageController::class, 'destroy
         ->name('profile.destroy');
 });
 
-
 /*
 |--------------------------------------------------------------------------
-| Authentication Routes
+| Auth Routes
 |--------------------------------------------------------------------------
 */
 

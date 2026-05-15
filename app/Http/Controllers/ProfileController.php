@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use App\Services\ProfileStrengthService;
 
 class ProfileController extends Controller
 {
@@ -16,11 +17,13 @@ class ProfileController extends Controller
 
         $profileScore = $this->calculateProfileScore($user);
         $profileSuggestions = $this->generateProfileSuggestions($user, $profileScore);
+        $profileStrength = app(ProfileStrengthService::class)->analyze($user);
 
         return view('profile.edit', [
             'user' => $user,
             'profileScore' => $profileScore,
             'profileSuggestions' => $profileSuggestions,
+             'profileStrength' => $profileStrength,
         ]);
     }
 
@@ -36,12 +39,10 @@ class ProfileController extends Controller
             'skills' => ['nullable', 'string', 'max:1000'],
             'bio' => ['nullable', 'string', 'max:2000'],
             'address' => ['nullable', 'string', 'max:500'],
-
             'profile_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'cover_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
 
-        unset($validated['profile_image'], $validated['cover_image']);
+        unset($validated['profile_image']);
 
         if ($request->hasFile('profile_image')) {
             if ($user->profile_image && Storage::disk('public')->exists($user->profile_image)) {
@@ -50,15 +51,6 @@ class ProfileController extends Controller
 
             $validated['profile_image'] = $request->file('profile_image')
                 ->store('profile-images', 'public');
-        }
-
-        if ($request->hasFile('cover_image')) {
-            if ($user->cover_image && Storage::disk('public')->exists($user->cover_image)) {
-                Storage::disk('public')->delete($user->cover_image);
-            }
-
-            $validated['cover_image'] = $request->file('cover_image')
-                ->store('cover-images', 'public');
         }
 
         $user->fill($validated);
@@ -77,10 +69,6 @@ class ProfileController extends Controller
 
         if ($user->profile_image && Storage::disk('public')->exists($user->profile_image)) {
             Storage::disk('public')->delete($user->profile_image);
-        }
-
-        if ($user->cover_image && Storage::disk('public')->exists($user->cover_image)) {
-            Storage::disk('public')->delete($user->cover_image);
         }
 
         auth()->logout();
@@ -105,7 +93,6 @@ class ProfileController extends Controller
             'bio',
             'address',
             'profile_image',
-            'cover_image',
         ];
 
         $completed = 0;
@@ -129,10 +116,6 @@ class ProfileController extends Controller
 
         if (empty($user->profile_image)) {
             $suggestions[] = 'Upload a professional profile photo.';
-        }
-
-        if (empty($user->cover_image)) {
-            $suggestions[] = 'Upload a cover banner to make your profile more attractive.';
         }
 
         if (empty($user->phone)) {

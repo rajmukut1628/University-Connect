@@ -10,6 +10,8 @@ use App\Models\Message;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use App\Services\AISuggestionService;
+use App\Services\ProfileStrengthService;
 
 class DashboardController extends Controller
 {
@@ -27,11 +29,14 @@ class DashboardController extends Controller
 
         $recommendedJobs = $this->getRecommendedJobs();
         $recommendedEvents = $this->getRecommendedEvents();
+        $profileStrength = app(ProfileStrengthService::class)->analyze($user);
+$profileScore = $profileStrength['score'];
 
-        $profileScore = $this->calculateProfileScore($user);
-        $aiSuggestions = $this->generateAiSuggestions($user, $profileScore);
+        // Real Dynamic AI Suggestions
+        $aiSuggestions = app(AISuggestionService::class)->latestFor($user, 6);
 
         return view('student.dashboard', compact(
+            'profileStrength',
             'user',
             'stats',
             'recommendedJobs',
@@ -60,7 +65,7 @@ class DashboardController extends Controller
         }
 
         if (Schema::hasColumn('jobs', 'status')) {
-            return Job::where('status', 'approved')->count();
+            return Job::whereIn('status', ['approved', 'active', 'published'])->count();
         }
 
         return Job::count();
@@ -72,17 +77,23 @@ class DashboardController extends Controller
             return collect();
         }
 
+        $query = Job::query();
+
         if (Schema::hasColumn('jobs', 'status')) {
-            return Job::where('status', 'approved')->latest()->take(4)->get();
+            $query->whereIn('status', ['approved', 'active', 'published']);
         }
 
-        return Job::latest()->take(4)->get();
+        return $query->latest()->take(4)->get();
     }
 
     private function getTotalEvents(): int
     {
         if (!Schema::hasTable('events')) {
             return 0;
+        }
+
+        if (Schema::hasColumn('events', 'status')) {
+            return Event::whereIn('status', ['approved', 'active', 'published'])->count();
         }
 
         return Event::count();
@@ -94,7 +105,13 @@ class DashboardController extends Controller
             return collect();
         }
 
-        return Event::latest()->take(4)->get();
+        $query = Event::query();
+
+        if (Schema::hasColumn('events', 'status')) {
+            $query->whereIn('status', ['approved', 'active', 'published']);
+        }
+
+        return $query->latest()->take(4)->get();
     }
 
     private function getMentorshipRequests(int $userId): int
@@ -111,7 +128,7 @@ class DashboardController extends Controller
             return Mentorship::where('user_id', $userId)->count();
         }
 
-        return Mentorship::count();
+        return 0;
     }
 
     private function getUnreadMessages(int $userId): int
@@ -122,13 +139,19 @@ class DashboardController extends Controller
 
         if (Schema::hasColumn('messages', 'recipient_id')) {
             return Message::where('recipient_id', $userId)
-                ->when(Schema::hasColumn('messages', 'read_at'), fn ($q) => $q->whereNull('read_at'))
+                ->when(
+                    Schema::hasColumn('messages', 'read_at'),
+                    fn ($q) => $q->whereNull('read_at')
+                )
                 ->count();
         }
 
         if (Schema::hasColumn('messages', 'to_user_id')) {
             return Message::where('to_user_id', $userId)
-                ->when(Schema::hasColumn('messages', 'read_at'), fn ($q) => $q->whereNull('read_at'))
+                ->when(
+                    Schema::hasColumn('messages', 'read_at'),
+                    fn ($q) => $q->whereNull('read_at')
+                )
                 ->count();
         }
 
@@ -143,16 +166,29 @@ class DashboardController extends Controller
 
         if (Schema::hasColumn('notifications', 'user_id')) {
             return Notification::where('user_id', $userId)
-                ->when(Schema::hasColumn('notifications', 'read_at'), fn ($q) => $q->whereNull('read_at'))
+                ->when(
+                    Schema::hasColumn('notifications', 'read_at'),
+                    fn ($q) => $q->whereNull('read_at')
+                )
                 ->count();
         }
 
-        return Notification::count();
+        return 0;
     }
 
     private function calculateProfileScore($user): int
     {
-        $fields = ['name', 'email', 'phone', 'department', 'batch', 'skills', 'bio', 'address'];
+        $fields = [
+            'name',
+            'email',
+            'phone',
+            'department',
+            'batch',
+            'skills',
+            'bio',
+            'address',
+        ];
+
         $completed = 0;
 
         foreach ($fields as $field) {
@@ -162,29 +198,6 @@ class DashboardController extends Controller
         }
 
         return (int) round(($completed / count($fields)) * 100);
-    }
-
-    private function generateAiSuggestions($user, int $profileScore): array
-    {
-        $suggestions = [];
-
-        if ($profileScore < 50) {
-            $suggestions[] = 'Complete your profile to get better job and mentorship recommendations.';
-        }
-
-        if (empty($user->skills)) {
-            $suggestions[] = 'Add your skills like Laravel, React, PHP, JavaScript, Python, AI Tools.';
-        }
-
-        if (empty($user->bio)) {
-            $suggestions[] = 'Write a short bio about your career goal and academic interests.';
-        }
-
-        $suggestions[] = 'Join events related to your department to improve networking.';
-        $suggestions[] = 'Apply to internships that match your current skills.';
-        $suggestions[] = 'Request mentorship from alumni to get career guidance.';
-
-        return $suggestions;
     }
 
     private function generateStudyAnswer(string $question): string

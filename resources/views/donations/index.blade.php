@@ -58,26 +58,30 @@
             </div>
         @endif
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-            <div class="donation-card p-4">
-                <p class="text-sm font-bold text-slate-500 dark:text-slate-300">Total Campaigns</p>
-                <h3 class="mt-3 text-4xl font-black text-emerald-500">{{ $donations->count() }}</h3>
-            </div>
-
-            <div class="donation-card p-4">
-                <p class="text-sm font-bold text-slate-500 dark:text-slate-300">Approved</p>
-                <h3 class="mt-3 text-4xl font-black text-cyan-500">
-                    {{ $donations->where('status', 'approved')->count() }}
-                </h3>
-            </div>
-
-            <div class="donation-card p-4">
-                <p class="text-sm font-bold text-slate-500 dark:text-slate-300">Pending Review</p>
-                <h3 class="mt-3 text-4xl font-black text-amber-500">
-                    {{ $donations->where('status', 'pending')->count() }}
-                </h3>
-            </div>
+        @if(auth()->user()->role === 'admin')
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div class="rounded-[1.5rem] bg-white/10 border border-white/10 p-5 shadow-xl">
+            <p class="text-slate-300 font-bold">Total Campaigns</p>
+            <h3 class="mt-4 text-4xl font-black text-emerald-400">
+                {{ $donations->count() }}
+            </h3>
         </div>
+
+        <div class="rounded-[1.5rem] bg-white/10 border border-white/10 p-5 shadow-xl">
+            <p class="text-slate-300 font-bold">Approved</p>
+            <h3 class="mt-4 text-4xl font-black text-cyan-400">
+                {{ $donations->where('status', 'approved')->count() }}
+            </h3>
+        </div>
+
+        <div class="rounded-[1.5rem] bg-white/10 border border-white/10 p-5 shadow-xl">
+            <p class="text-slate-300 font-bold">Pending Review</p>
+            <h3 class="mt-4 text-4xl font-black text-amber-400">
+                {{ $donations->where('status', 'pending')->count() }}
+            </h3>
+        </div>
+    </div>
+@endif
 
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
             @forelse($donations as $donation)
