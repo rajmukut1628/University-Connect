@@ -94,6 +94,14 @@
                                 <p class="mt-1 text-sm text-slate-500">
                                     {{ $requestItem->student?->email ?? 'No email found' }}
                                 </p>
+                                <a href="{{ route('profiles.student.show', $requestItem->student_id) }}"
+   class="inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-xl
+          bg-gradient-to-r from-blue-500 to-cyan-500
+          text-white text-sm font-black shadow-lg
+          hover:scale-105 transition duration-300">
+    <i class="fas fa-user-graduate"></i>
+    View Student Profile
+</a>
 
                                 <p class="mt-4 font-black text-purple-500">
                                     {{ $requestItem->title ?? 'Career Mentorship Request' }}

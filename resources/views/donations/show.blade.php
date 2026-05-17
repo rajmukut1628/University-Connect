@@ -138,6 +138,63 @@
                         </p>
                     </div>
                 </div>
+               @if($donation->status === 'approved')
+    <div class="mt-6 relative overflow-hidden rounded-[28px]
+                bg-gradient-to-br from-indigo-500/10 via-blue-500/10 to-cyan-500/10
+                border border-blue-500/20 p-5 md:p-6 shadow-2xl">
+
+        <div class="absolute -top-10 -right-10 w-36 h-36 bg-blue-400/20 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-10 -left-10 w-36 h-36 bg-indigo-400/20 rounded-full blur-3xl"></div>
+
+        <div class="relative">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-500
+                            flex items-center justify-center text-white text-xl shadow-lg uc-float">
+                    💳
+                </div>
+
+                <div>
+                    <h3 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white">
+                        Pay Online with Stripe
+                    </h3>
+                    <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400">
+                        Secure card payment powered by Stripe Checkout.
+                    </p>
+                </div>
+            </div>
+
+            <form action="{{ route('donations.stripe.checkout', $donation) }}"
+                  method="POST"
+                  class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end">
+                @csrf
+
+                <div>
+                    <label class="block text-sm font-black text-slate-700 dark:text-slate-300 mb-2">
+                        Amount ({{ strtoupper(config('services.stripe.currency', 'usd')) }})
+                    </label>
+
+                    <input type="number"
+                           name="amount"
+                           min="1"
+                           step="0.01"
+                           required
+                           value="{{ old('amount') }}"
+                           placeholder="10"
+                           class="w-full rounded-2xl border-slate-300 dark:border-white/10
+                                  dark:bg-slate-950 dark:text-white">
+                </div>
+
+                <button type="submit"
+                        class="px-7 py-3 rounded-2xl bg-gradient-to-r
+                               from-indigo-500 via-blue-500 to-cyan-500
+                               text-white font-black shadow-xl
+                               hover:scale-105 transition duration-300">
+                    Pay with Stripe
+                </button>
+            </form>
+        </div>
+    </div>
+@endif
                                 @if($donation->status === 'approved')
                     <div class="mt-6 rounded-[26px] bg-gradient-to-br from-emerald-500/10 via-cyan-500/10 to-blue-500/10 border border-emerald-500/20 p-5 md:p-6 shadow-xl">
 

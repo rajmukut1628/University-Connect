@@ -40,6 +40,16 @@ class User extends Authenticatable
 
         'alumni_id',
         'student_id',
+        'github_url',
+        'linkedin_url',
+         'portfolio_url',
+         'current_company',
+        'current_designation',
+         'current_job_type',
+        'work_experience_years',
+         'previous_company',
+          'previous_designation',
+          'previous_job_details',
     ];
 
     /*

@@ -348,6 +348,40 @@
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
                         </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div>
+        <label class="block text-xs font-black text-slate-300 mb-2">
+            GitHub Profile
+        </label>
+        <input type="url"
+               name="github_url"
+               value="{{ old('github_url', auth()->user()->github_url) }}"
+               placeholder="https://github.com/username"
+               class="w-full rounded-2xl border-white/10 bg-slate-950 text-white">
+    </div>
+
+    <div>
+        <label class="block text-xs font-black text-slate-300 mb-2">
+            LinkedIn Profile
+        </label>
+        <input type="url"
+               name="linkedin_url"
+               value="{{ old('linkedin_url', auth()->user()->linkedin_url) }}"
+               placeholder="https://linkedin.com/in/username"
+               class="w-full rounded-2xl border-white/10 bg-slate-950 text-white">
+    </div>
+
+    <div>
+        <label class="block text-xs font-black text-slate-300 mb-2">
+            Portfolio / Website
+        </label>
+        <input type="url"
+               name="portfolio_url"
+               value="{{ old('portfolio_url', auth()->user()->portfolio_url) }}"
+               placeholder="https://yourwebsite.com"
+               class="w-full rounded-2xl border-white/10 bg-slate-950 text-white">
+    </div>
+</div>
 
                         <div>
                             <label class="font-bold text-slate-700 dark:text-slate-300">
@@ -361,6 +395,128 @@
                                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                             @enderror
                         </div>
+                        {{-- Work Experience Section --}}
+<div class="rounded-3xl bg-gradient-to-br from-emerald-500/10 via-cyan-500/10 to-blue-500/10 border border-emerald-500/20 p-6 shadow-xl">
+    <div class="mb-6">
+        <p class="text-sm uppercase tracking-[0.25em] text-emerald-500 font-black">
+            Work Experience
+        </p>
+
+        <h4 class="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+            Current & Previous Job Details
+        </h4>
+
+        <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Add your current workplace, designation and previous job experience for better networking and mentor matching.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300">
+                Current Company / Workplace
+            </label>
+            <input type="text"
+                   name="current_company"
+                   value="{{ old('current_company', $user->current_company) }}"
+                   placeholder="Example: Google, Brain Station 23, University Lab"
+                   class="mt-2 w-full rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
+            @error('current_company')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300">
+                Current Designation
+            </label>
+            <input type="text"
+                   name="current_designation"
+                   value="{{ old('current_designation', $user->current_designation) }}"
+                   placeholder="Example: Software Engineer, Intern, Lecturer"
+                   class="mt-2 w-full rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
+            @error('current_designation')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300">
+                Job Type
+            </label>
+            <select name="current_job_type"
+                    class="mt-2 w-full rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
+                <option value="">Select Job Type</option>
+                <option value="Full-time" {{ old('current_job_type', $user->current_job_type) === 'Full-time' ? 'selected' : '' }}>Full-time</option>
+                <option value="Part-time" {{ old('current_job_type', $user->current_job_type) === 'Part-time' ? 'selected' : '' }}>Part-time</option>
+                <option value="Internship" {{ old('current_job_type', $user->current_job_type) === 'Internship' ? 'selected' : '' }}>Internship</option>
+                <option value="Freelance" {{ old('current_job_type', $user->current_job_type) === 'Freelance' ? 'selected' : '' }}>Freelance</option>
+                <option value="Remote" {{ old('current_job_type', $user->current_job_type) === 'Remote' ? 'selected' : '' }}>Remote</option>
+                <option value="Not Working Yet" {{ old('current_job_type', $user->current_job_type) === 'Not Working Yet' ? 'selected' : '' }}>Not Working Yet</option>
+            </select>
+            @error('current_job_type')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300">
+                Total Experience
+            </label>
+            <input type="text"
+                   name="work_experience_years"
+                   value="{{ old('work_experience_years', $user->work_experience_years) }}"
+                   placeholder="Example: 2 years, 6 months, Fresher"
+                   class="mt-2 w-full rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
+            @error('work_experience_years')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300">
+                Previous Company
+            </label>
+            <input type="text"
+                   name="previous_company"
+                   value="{{ old('previous_company', $user->previous_company) }}"
+                   placeholder="Example: Previous company name"
+                   class="mt-2 w-full rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
+            @error('previous_company')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <div>
+            <label class="font-bold text-slate-700 dark:text-slate-300">
+                Previous Designation
+            </label>
+            <input type="text"
+                   name="previous_designation"
+                   value="{{ old('previous_designation', $user->previous_designation) }}"
+                   placeholder="Example: Junior Developer, Teaching Assistant"
+                   class="mt-2 w-full rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
+            @error('previous_designation')
+                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+
+    <div class="mt-6">
+        <label class="font-bold text-slate-700 dark:text-slate-300">
+            Previous Job / Experience Details
+        </label>
+        <textarea name="previous_job_details"
+                  rows="4"
+                  placeholder="Write about your previous job, internship, project, responsibility, achievement..."
+                  class="mt-2 w-full rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">{{ old('previous_job_details', $user->previous_job_details) }}</textarea>
+        @error('previous_job_details')
+            <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+</div>
 
                         @if($role === 'alumni')
                             <div class="rounded-3xl bg-purple-500/10 border border-purple-500/20 p-6">

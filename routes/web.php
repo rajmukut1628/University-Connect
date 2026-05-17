@@ -20,7 +20,8 @@ use App\Http\Controllers\FeedActionController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\AskAIController;
-
+use App\Http\Controllers\StripeDonationController;
+use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\VerificationController;
@@ -74,12 +75,30 @@ Route::middleware(['auth'])->group(function () {
     | Main Dashboard Redirect
     |--------------------------------------------------------------------------
     */
+    Route::middleware(['auth'])->group(function () {
+    Route::post('/donations/{donation}/stripe/checkout', [StripeDonationController::class, 'checkout'])
+        ->name('donations.stripe.checkout');
 
+    Route::get('/donations/{donation}/stripe/success', [StripeDonationController::class, 'success'])
+        ->name('donations.stripe.success');
+
+    Route::get('/donations/{donation}/stripe/cancel', [StripeDonationController::class, 'cancel'])
+        ->name('donations.stripe.cancel');
+});
+
+Route::middleware(['auth'])->group(function () {
+    
+    Route::get('/profiles/alumni/{user}', [PublicProfileController::class, 'alumni'])
+        ->name('profiles.alumni.show');
+
+    Route::get('/profiles/student/{user}', [PublicProfileController::class, 'student'])
+        ->name('profiles.student.show');
+});
     Route::get('/dashboard', function () {
         $user = auth()->user();
 
         if ($user->is_blocked) {
-            auth()->logout();
+            auth()->guard()->logout();
 
             return redirect()->route('login')->withErrors([
                 'email' => 'Your account has been blocked.',
@@ -87,7 +106,7 @@ Route::middleware(['auth'])->group(function () {
         }
 
         if (!$user->is_active) {
-            auth()->logout();
+            auth()->guard()->logout();
 
             return redirect()->route('login')->withErrors([
                 'email' => 'Your account is not active yet.',
@@ -102,6 +121,7 @@ Route::middleware(['auth'])->group(function () {
             default       => redirect()->route('home'),
         };
     })->name('dashboard');
+    
 
     /*
     |--------------------------------------------------------------------------
@@ -449,7 +469,12 @@ Route::middleware(['auth'])->group(function () {
 
         Route::post('/alumni-mentors/{mentor}/request', [MentorshipController::class, 'requestMentor'])
             ->name('mentors.request');
+            Route::delete('/mentors/{mentor}/cancel', [MentorshipController::class, 'cancelRequest'])
+    ->name('mentors.cancel');
     });
+    
+    Route::post('/mentors/{mentor}/ai-match', [MentorshipController::class, 'aiMatch'])
+    ->name('mentors.ai-match');
 
     Route::middleware(['role:alumni'])->group(function () {
 

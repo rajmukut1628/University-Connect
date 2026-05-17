@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ProfileStrengthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use App\Services\ProfileStrengthService;
 
 class ProfileController extends Controller
 {
@@ -23,7 +23,7 @@ class ProfileController extends Controller
             'user' => $user,
             'profileScore' => $profileScore,
             'profileSuggestions' => $profileSuggestions,
-             'profileStrength' => $profileStrength,
+            'profileStrength' => $profileStrength,
         ]);
     }
 
@@ -40,6 +40,18 @@ class ProfileController extends Controller
             'bio' => ['nullable', 'string', 'max:2000'],
             'address' => ['nullable', 'string', 'max:500'],
             'profile_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+
+            // Social / Professional Links
+            'github_url' => ['nullable', 'url', 'max:255'],
+            'linkedin_url' => ['nullable', 'url', 'max:255'],
+            'portfolio_url' => ['nullable', 'url', 'max:255'],
+            'current_company' => ['nullable', 'string', 'max:255'],
+            'current_designation' => ['nullable', 'string', 'max:255'],
+            'current_job_type' => ['nullable', 'string', 'max:100'],
+            'work_experience_years' => ['nullable', 'string', 'max:100'],
+            'previous_company' => ['nullable', 'string', 'max:255'],
+            'previous_designation' => ['nullable', 'string', 'max:255'],
+            'previous_job_details' => ['nullable', 'string', 'max:2000'],
         ]);
 
         unset($validated['profile_image']);
@@ -71,7 +83,7 @@ class ProfileController extends Controller
             Storage::disk('public')->delete($user->profile_image);
         }
 
-        auth()->logout();
+        auth()->guard()->logout();
 
         $user->delete();
 
@@ -93,6 +105,14 @@ class ProfileController extends Controller
             'bio',
             'address',
             'profile_image',
+            'github_url',
+            'linkedin_url',
+            'portfolio_url',
+            'current_company',
+            'current_designation',
+            'work_experience_years',
+            'previous_company',
+            'previous_job_details',
         ];
 
         $completed = 0;
@@ -134,6 +154,18 @@ class ProfileController extends Controller
             $suggestions[] = 'Add your skills like Laravel, PHP, JavaScript, Python, React, Communication.';
         }
 
+        if (empty($user->github_url)) {
+            $suggestions[] = 'Add your GitHub profile to showcase projects and code.';
+        }
+
+        if (empty($user->linkedin_url)) {
+            $suggestions[] = 'Add your LinkedIn profile for professional networking.';
+        }
+
+        if (empty($user->portfolio_url)) {
+            $suggestions[] = 'Add your portfolio or website link to improve your professional profile.';
+        }
+
         if (empty($user->bio)) {
             $suggestions[] = 'Write a short bio about your academic or professional goal.';
         }
@@ -141,6 +173,21 @@ class ProfileController extends Controller
         if (empty($suggestions)) {
             $suggestions[] = 'Your profile looks strong. Keep it updated regularly.';
         }
+        if (empty($user->current_company)) {
+    $suggestions[] = 'Add your current company or workplace.';
+}
+
+if (empty($user->current_designation)) {
+    $suggestions[] = 'Add your current designation or job role.';
+}
+
+if (empty($user->work_experience_years)) {
+    $suggestions[] = 'Add your total work experience.';
+}
+
+if (empty($user->previous_job_details)) {
+    $suggestions[] = 'Add previous job or experience details.';
+}
 
         return $suggestions;
     }
