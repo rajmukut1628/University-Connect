@@ -22,12 +22,15 @@ use App\Http\Controllers\AIController;
 use App\Http\Controllers\AskAIController;
 use App\Http\Controllers\StripeDonationController;
 use App\Http\Controllers\PublicProfileController;
+use App\Http\Controllers\AlumniWorkExperienceController;
+
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\VerificationController;
 
 use App\Http\Controllers\SuperAdmin\AdminController;
 use App\Http\Controllers\SuperAdmin\VerifiedUserController as SuperAdminVerifiedUserController;
+use App\Http\Controllers\SuperAdmin\SuperAdminManagementController;
 
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Alumni\DashboardController as AlumniDashboardController;
@@ -40,27 +43,42 @@ use App\Http\Controllers\AlumniConversionController;
 */
 
 Route::get('/', function () {
+
     $homeStats = [
+
         'students' => User::where('role', 'student')->count(),
+
         'alumni' => User::where('role', 'alumni')->count(),
 
         'jobs' => Schema::hasTable('job_postings')
             ? DB::table('job_postings')->count()
-            : (Schema::hasTable('jobs') ? DB::table('jobs')->count() : 0),
+            : (
+                Schema::hasTable('jobs')
+                    ? DB::table('jobs')->count()
+                    : 0
+            ),
 
         'events' => Schema::hasTable('events')
             ? DB::table('events')->count()
             : 0,
 
-        'admins' => User::whereIn('role', ['admin', 'super_admin'])->count(),
+        'admins' => User::whereIn(
+            'role',
+            ['admin', 'super_admin']
+        )->count(),
 
         'verified_users' => User::where('is_active', true)
             ->where('is_blocked', false)
             ->count(),
     ];
 
-    return view('welcome', compact('homeStats'));
+    return view(
+        'welcome',
+        compact('homeStats')
+    );
+
 })->name('home');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -72,56 +90,98 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Stripe Donation Routes
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post(
+        '/donations/{donation}/stripe/checkout',
+        [StripeDonationController::class, 'checkout']
+    )->name('donations.stripe.checkout');
+
+
+    Route::get(
+        '/donations/{donation}/stripe/success',
+        [StripeDonationController::class, 'success']
+    )->name('donations.stripe.success');
+
+
+    Route::get(
+        '/donations/{donation}/stripe/cancel',
+        [StripeDonationController::class, 'cancel']
+    )->name('donations.stripe.cancel');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public Profiles
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get(
+        '/profiles/alumni/{user}',
+        [PublicProfileController::class, 'alumni']
+    )->name('profiles.alumni.show');
+
+
+    Route::get(
+        '/profiles/student/{user}',
+        [PublicProfileController::class, 'student']
+    )->name('profiles.student.show');
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Main Dashboard Redirect
     |--------------------------------------------------------------------------
     */
-    Route::middleware(['auth'])->group(function () {
-    Route::post('/donations/{donation}/stripe/checkout', [StripeDonationController::class, 'checkout'])
-        ->name('donations.stripe.checkout');
 
-    Route::get('/donations/{donation}/stripe/success', [StripeDonationController::class, 'success'])
-        ->name('donations.stripe.success');
-
-    Route::get('/donations/{donation}/stripe/cancel', [StripeDonationController::class, 'cancel'])
-        ->name('donations.stripe.cancel');
-});
-
-Route::middleware(['auth'])->group(function () {
-    
-    Route::get('/profiles/alumni/{user}', [PublicProfileController::class, 'alumni'])
-        ->name('profiles.alumni.show');
-
-    Route::get('/profiles/student/{user}', [PublicProfileController::class, 'student'])
-        ->name('profiles.student.show');
-});
     Route::get('/dashboard', function () {
+
         $user = auth()->user();
 
         if ($user->is_blocked) {
+
             auth()->guard()->logout();
 
-            return redirect()->route('login')->withErrors([
-                'email' => 'Your account has been blocked.',
-            ]);
+            return redirect()
+                ->route('login')
+                ->withErrors([
+                    'email' => 'Your account has been blocked.',
+                ]);
         }
 
         if (!$user->is_active) {
+
             auth()->guard()->logout();
 
-            return redirect()->route('login')->withErrors([
-                'email' => 'Your account is not active yet.',
-            ]);
+            return redirect()
+                ->route('login')
+                ->withErrors([
+                    'email' => 'Your account is not active yet.',
+                ]);
         }
 
         return match ($user->role) {
-            'super_admin' => redirect()->route('superadmin.dashboard'),
-            'admin'       => redirect()->route('admin.dashboard'),
-            'student'     => redirect()->route('student.dashboard'),
-            'alumni'      => redirect()->route('alumni.dashboard'),
-            default       => redirect()->route('home'),
+
+            'super_admin' => redirect()
+                ->route('superadmin.dashboard'),
+
+            'admin' => redirect()
+                ->route('admin.dashboard'),
+
+            'student' => redirect()
+                ->route('student.dashboard'),
+
+            'alumni' => redirect()
+                ->route('alumni.dashboard'),
+
+            default => redirect()
+                ->route('home'),
         };
+
     })->name('dashboard');
-    
+
 
     /*
     |--------------------------------------------------------------------------
@@ -129,24 +189,45 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::middleware(['role:student'])->group(function () {
-        Route::get('/alumni-conversion/apply', [AlumniConversionController::class, 'create'])
-            ->name('alumni-conversion.create');
+    Route::middleware(['role:student'])
+        ->group(function () {
 
-        Route::post('/alumni-conversion/apply', [AlumniConversionController::class, 'store'])
-            ->name('alumni-conversion.store');
-    });
+            Route::get(
+                '/alumni-conversion/apply',
+                [AlumniConversionController::class, 'create']
+            )->name('alumni-conversion.create');
 
-    Route::middleware(['role:admin,super_admin'])->group(function () {
-        Route::get('/alumni-conversion/requests', [AlumniConversionController::class, 'index'])
-            ->name('alumni-conversion.index');
 
-        Route::patch('/alumni-conversion/{conversionRequest}/approve', [AlumniConversionController::class, 'approve'])
-            ->name('alumni-conversion.approve');
+            Route::post(
+                '/alumni-conversion/apply',
+                [AlumniConversionController::class, 'store']
+            )->name('alumni-conversion.store');
 
-        Route::patch('/alumni-conversion/{conversionRequest}/reject', [AlumniConversionController::class, 'reject'])
-            ->name('alumni-conversion.reject');
-    });
+        });
+
+
+    Route::middleware(['role:admin,super_admin'])
+        ->group(function () {
+
+            Route::get(
+                '/alumni-conversion/requests',
+                [AlumniConversionController::class, 'index']
+            )->name('alumni-conversion.index');
+
+
+            Route::patch(
+                '/alumni-conversion/{conversionRequest}/approve',
+                [AlumniConversionController::class, 'approve']
+            )->name('alumni-conversion.approve');
+
+
+            Route::patch(
+                '/alumni-conversion/{conversionRequest}/reject',
+                [AlumniConversionController::class, 'reject']
+            )->name('alumni-conversion.reject');
+
+        });
+
 
     /*
     |--------------------------------------------------------------------------
@@ -155,100 +236,410 @@ Route::middleware(['auth'])->group(function () {
     */
 
     Route::middleware(['role:super_admin'])
-        ->prefix('superadmin')
-        ->name('superadmin.')
-        ->group(function () {
+    ->prefix('superadmin')
+    ->name('superadmin.')
+    ->group(function () {
 
-            Route::get('/dashboard', [AdminDashboardController::class, 'index'])
-                ->name('dashboard');
-
-            Route::post('/generate-ai-report', [AdminDashboardController::class, 'generateAiReport'])
-                ->name('generate-ai-report');
-
-            Route::get('/verified-users', [SuperAdminVerifiedUserController::class, 'index'])
-                ->name('verified-users.index');
-
-            Route::post('/verified-users', [SuperAdminVerifiedUserController::class, 'store'])
-                ->name('verified-users.store');
-
-            Route::post('/verified-users/bulk-store', [SuperAdminVerifiedUserController::class, 'bulkStore'])
-                ->name('verified-users.bulk-store');
-
-            Route::post('/verified-users/bulk-preview', [SuperAdminVerifiedUserController::class, 'bulkPreview'])
-                ->name('verified-users.bulk-preview');
-
-            Route::post('/verified-users/bulk-confirm', [SuperAdminVerifiedUserController::class, 'bulkConfirm'])
-                ->name('verified-users.bulk-confirm');
-
-            Route::delete('/verified-users/{verifiedUser}', [SuperAdminVerifiedUserController::class, 'destroy'])
-                ->name('verified-users.destroy');
-
-            Route::get('/admins/create', [AdminController::class, 'create'])
-                ->name('admins.create');
-
-            Route::post('/admins', [AdminController::class, 'store'])
-                ->name('admins.store');
-
-            Route::get('/users', [UserManagementController::class, 'index'])
-                ->name('users.index');
-
-            Route::patch('/users/{user}/block', [UserManagementController::class, 'block'])
-                ->name('users.block');
-
-            Route::patch('/users/{user}/unblock', [UserManagementController::class, 'unblock'])
-                ->name('users.unblock');
-
-            Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])
-                ->name('users.destroy');
-
-            Route::get('/verification', [VerificationController::class, 'index'])
-                ->name('verification.index');
-
-            Route::patch('/verification/{user}/approve', [VerificationController::class, 'approve'])
-                ->name('verification.approve');
-
-            Route::patch('/verification/{user}/reject', [VerificationController::class, 'reject'])
-                ->name('verification.reject');
-        });
             /*
+            |--------------------------------------------------------------------------
+            | Super Admin Dashboard
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get(
+                '/dashboard',
+                [AdminDashboardController::class, 'index']
+            )->name('dashboard');
+
+
+            Route::post(
+                '/generate-ai-report',
+                [AdminDashboardController::class, 'generateAiReport']
+            )->name('generate-ai-report');
+
+ /*
+|--------------------------------------------------------------------------
+| User Management
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/users',
+    [UserManagementController::class, 'index']
+)->name('users.index');
+
+
+Route::get(
+    '/users/{user}/edit',
+    [UserManagementController::class, 'edit']
+)->name('users.edit');
+
+
+Route::patch(
+    '/users/{user}',
+    [UserManagementController::class, 'update']
+)->name('users.update');
+
+
+Route::patch(
+    '/users/{user}/block',
+    [UserManagementController::class, 'block']
+)->name('users.block');
+
+
+Route::patch(
+    '/users/{user}/unblock',
+    [UserManagementController::class, 'unblock']
+)->name('users.unblock');
+
+
+Route::delete(
+    '/users/{user}',
+    [UserManagementController::class, 'destroy']
+)->name('users.destroy');
+            /*
+            |--------------------------------------------------------------------------
+            | Verified Users
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get(
+                '/verified-users',
+                [SuperAdminVerifiedUserController::class, 'index']
+            )->name('verified-users.index');
+
+
+            Route::post(
+                '/verified-users',
+                [SuperAdminVerifiedUserController::class, 'store']
+            )->name('verified-users.store');
+
+
+            Route::post(
+                '/verified-users/bulk-store',
+                [SuperAdminVerifiedUserController::class, 'bulkStore']
+            )->name('verified-users.bulk-store');
+
+
+            Route::post(
+                '/verified-users/bulk-preview',
+                [SuperAdminVerifiedUserController::class, 'bulkPreview']
+            )->name('verified-users.bulk-preview');
+
+
+            Route::post(
+                '/verified-users/bulk-confirm',
+                [SuperAdminVerifiedUserController::class, 'bulkConfirm']
+            )->name('verified-users.bulk-confirm');
+
+
+            Route::delete(
+                '/verified-users/{verifiedUser}',
+                [SuperAdminVerifiedUserController::class, 'destroy']
+            )->name('verified-users.destroy');
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Create General Admin
+            |--------------------------------------------------------------------------
+            */
+
+          Route::middleware(['role:super_admin'])
+    ->group(function () {
+
+        Route::get(
+            '/admins/create',
+            [AdminController::class, 'create']
+        )->name('admins.create');
+
+        Route::post(
+            '/admins',
+            [AdminController::class, 'store']
+        )->name('admins.store');
+
+    });
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | User Management
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get(
+                '/users',
+                [UserManagementController::class, 'index']
+            )->name('users.index');
+
+
+            Route::patch(
+                '/users/{user}/block',
+                [UserManagementController::class, 'block']
+            )->name('users.block');
+
+
+            Route::patch(
+                '/users/{user}/unblock',
+                [UserManagementController::class, 'unblock']
+            )->name('users.unblock');
+
+
+            Route::delete(
+                '/users/{user}',
+                [UserManagementController::class, 'destroy']
+            )->name('users.destroy');
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Verification
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get(
+                '/verification',
+                [VerificationController::class, 'index']
+            )->name('verification.index');
+
+
+            Route::patch(
+                '/verification/{user}/approve',
+                [VerificationController::class, 'approve']
+            )->name('verification.approve');
+
+
+            Route::patch(
+                '/verification/{user}/reject',
+                [VerificationController::class, 'reject']
+            )->name('verification.reject');
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | OWNER SUPER ADMIN ONLY
+            |--------------------------------------------------------------------------
+            |
+            | Only the current Owner Super Admin can:
+            |
+            | - View all Super Admins
+            | - Add another Super Admin
+            | - Transfer ownership
+            | - Remove a normal Super Admin
+            |
+            */
+
+            Route::middleware(['owner'])
+                ->group(function () {
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Super Admin Management
+                    |--------------------------------------------------------------------------
+                    */
+
+                    Route::get(
+                        '/super-admins',
+                        [SuperAdminManagementController::class, 'index']
+                    )->name('super-admins.index');
+
+
+                    Route::get(
+                        '/super-admins/create',
+                        [SuperAdminManagementController::class, 'create']
+                    )->name('super-admins.create');
+
+
+                    Route::post(
+                        '/super-admins',
+                        [SuperAdminManagementController::class, 'store']
+                    )->name('super-admins.store');
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Transfer Ownership
+                    |--------------------------------------------------------------------------
+                    */
+
+                    Route::patch(
+                        '/super-admins/{user}/transfer-ownership',
+                        [SuperAdminManagementController::class, 'transferOwnership']
+                    )->name('super-admins.transfer-ownership');
+
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Remove Super Admin
+                    |--------------------------------------------------------------------------
+                    */
+
+                    Route::delete(
+                        '/super-admins/{user}',
+                        [SuperAdminManagementController::class, 'destroy']
+                    )->name('super-admins.destroy');
+
+                });
+
+        });
+
+
+    /*
     |--------------------------------------------------------------------------
     | Admin Routes
     |--------------------------------------------------------------------------
     */
 
-    Route::middleware(['role:admin'])
-        ->prefix('admin')
-        ->name('admin.')
-        ->group(function () {
+    /*
+|--------------------------------------------------------------------------
+| General Admin Routes
+|--------------------------------------------------------------------------
+|
+| General Admin can use the main management features available to
+| Super Admin, except:
+|
+| - Create General Admin
+| - Create Super Admin
+| - Manage Super Admins
+| - Transfer Ownership
+|
+*/
 
-            Route::get('/dashboard', [AdminDashboardController::class, 'index'])
-                ->name('dashboard');
+Route::middleware(['role:admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
 
-            Route::post('/generate-ai-report', [AdminDashboardController::class, 'generateAiReport'])
-                ->name('generate-ai-report');
+        /*
+        |--------------------------------------------------------------------------
+        | Dashboard
+        |--------------------------------------------------------------------------
+        */
 
-            Route::get('/users', [UserManagementController::class, 'index'])
-                ->name('users.index');
+        Route::get(
+            '/dashboard',
+            [AdminDashboardController::class, 'index']
+        )->name('dashboard');
 
-            Route::patch('/users/{user}/block', [UserManagementController::class, 'block'])
-                ->name('users.block');
 
-            Route::patch('/users/{user}/unblock', [UserManagementController::class, 'unblock'])
-                ->name('users.unblock');
+        Route::post(
+            '/generate-ai-report',
+            [AdminDashboardController::class, 'generateAiReport']
+        )->name('generate-ai-report');
 
-            Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])
-                ->name('users.destroy');
 
-            Route::get('/verification', [VerificationController::class, 'index'])
-                ->name('verification.index');
+        /*
+        |--------------------------------------------------------------------------
+        | User Management
+        |--------------------------------------------------------------------------
+        */
 
-            Route::patch('/verification/{user}/approve', [VerificationController::class, 'approve'])
-                ->name('verification.approve');
+        Route::get(
+            '/users',
+            [UserManagementController::class, 'index']
+        )->name('users.index');
 
-            Route::patch('/verification/{user}/reject', [VerificationController::class, 'reject'])
-                ->name('verification.reject');
-        });
 
+        Route::get(
+            '/users/{user}/edit',
+            [UserManagementController::class, 'edit']
+        )->name('users.edit');
+
+
+        Route::patch(
+            '/users/{user}',
+            [UserManagementController::class, 'update']
+        )->name('users.update');
+
+
+        Route::patch(
+            '/users/{user}/block',
+            [UserManagementController::class, 'block']
+        )->name('users.block');
+
+
+        Route::patch(
+            '/users/{user}/unblock',
+            [UserManagementController::class, 'unblock']
+        )->name('users.unblock');
+
+
+        Route::delete(
+            '/users/{user}',
+            [UserManagementController::class, 'destroy']
+        )->name('users.destroy');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | User Verification
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/verification',
+            [VerificationController::class, 'index']
+        )->name('verification.index');
+
+
+        Route::patch(
+            '/verification/{user}/approve',
+            [VerificationController::class, 'approve']
+        )->name('verification.approve');
+
+
+        Route::patch(
+            '/verification/{user}/reject',
+            [VerificationController::class, 'reject']
+        )->name('verification.reject');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Verified Student / Alumni Database
+        |--------------------------------------------------------------------------
+        |
+        | General Admin can manage verified Student and Alumni records.
+        | They cannot create Admin or Super Admin accounts.
+        |
+        */
+
+        Route::get(
+            '/verified-users',
+            [SuperAdminVerifiedUserController::class, 'index']
+        )->name('verified-users.index');
+
+
+        Route::post(
+            '/verified-users',
+            [SuperAdminVerifiedUserController::class, 'store']
+        )->name('verified-users.store');
+
+
+        Route::post(
+            '/verified-users/bulk-store',
+            [SuperAdminVerifiedUserController::class, 'bulkStore']
+        )->name('verified-users.bulk-store');
+
+
+        Route::post(
+            '/verified-users/bulk-preview',
+            [SuperAdminVerifiedUserController::class, 'bulkPreview']
+        )->name('verified-users.bulk-preview');
+
+
+        Route::post(
+            '/verified-users/bulk-confirm',
+            [SuperAdminVerifiedUserController::class, 'bulkConfirm']
+        )->name('verified-users.bulk-confirm');
+
+
+        Route::delete(
+            '/verified-users/{verifiedUser}',
+            [SuperAdminVerifiedUserController::class, 'destroy']
+        )->name('verified-users.destroy');
+
+    });
     /*
     |--------------------------------------------------------------------------
     | Student Routes
@@ -260,12 +651,19 @@ Route::middleware(['auth'])->group(function () {
         ->name('student.')
         ->group(function () {
 
-            Route::get('/dashboard', [StudentDashboardController::class, 'index'])
-                ->name('dashboard');
+            Route::get(
+                '/dashboard',
+                [StudentDashboardController::class, 'index']
+            )->name('dashboard');
 
-            Route::post('/ai-study-assistant', [AIController::class, 'ask'])
-                ->name('ai.study.assistant');
+
+            Route::post(
+                '/ai-study-assistant',
+                [AIController::class, 'ask']
+            )->name('ai.study.assistant');
+
         });
+
 
     /*
     |--------------------------------------------------------------------------
@@ -278,9 +676,13 @@ Route::middleware(['auth'])->group(function () {
         ->name('alumni.')
         ->group(function () {
 
-            Route::get('/dashboard', [AlumniDashboardController::class, 'index'])
-                ->name('dashboard');
+            Route::get(
+                '/dashboard',
+                [AlumniDashboardController::class, 'index']
+            )->name('dashboard');
+
         });
+
 
     /*
     |--------------------------------------------------------------------------
@@ -288,11 +690,17 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/ask-ai', [AskAIController::class, 'index'])
-        ->name('ask-ai.index');
+    Route::get(
+        '/ask-ai',
+        [AskAIController::class, 'index']
+    )->name('ask-ai.index');
 
-    Route::post('/ask-ai/ask', [AskAIController::class, 'ask'])
-        ->name('ask-ai.ask');
+
+    Route::post(
+        '/ask-ai/ask',
+        [AskAIController::class, 'ask']
+    )->name('ask-ai.ask');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -300,17 +708,29 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/newsfeed', [NewsfeedController::class, 'index'])
-        ->name('newsfeed.index');
+    Route::get(
+        '/newsfeed',
+        [NewsfeedController::class, 'index']
+    )->name('newsfeed.index');
 
-    Route::post('/newsfeed/like', [FeedActionController::class, 'like'])
-        ->name('newsfeed.like');
 
-    Route::post('/newsfeed/comment', [FeedActionController::class, 'comment'])
-        ->name('newsfeed.comment');
+    Route::post(
+        '/newsfeed/like',
+        [FeedActionController::class, 'like']
+    )->name('newsfeed.like');
 
-    Route::post('/newsfeed/share', [FeedActionController::class, 'share'])
-        ->name('newsfeed.share');
+
+    Route::post(
+        '/newsfeed/comment',
+        [FeedActionController::class, 'comment']
+    )->name('newsfeed.comment');
+
+
+    Route::post(
+        '/newsfeed/share',
+        [FeedActionController::class, 'share']
+    )->name('newsfeed.share');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -318,20 +738,35 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/messages', [MessageController::class, 'index'])
-        ->name('messages.index');
+    Route::get(
+        '/messages',
+        [MessageController::class, 'index']
+    )->name('messages.index');
 
-    Route::get('/messages/{user}', [MessageController::class, 'show'])
-        ->name('messages.show');
 
-    Route::post('/messages/{user}', [MessageController::class, 'store'])
-        ->name('messages.store');
+    Route::get(
+        '/messages/{user}',
+        [MessageController::class, 'show']
+    )->name('messages.show');
 
-    Route::patch('/messages/message/{message}', [MessageController::class, 'update'])
-        ->name('messages.update');
 
-    Route::delete('/messages/message/{message}', [MessageController::class, 'destroy'])
-        ->name('messages.destroy');
+    Route::post(
+        '/messages/{user}',
+        [MessageController::class, 'store']
+    )->name('messages.store');
+
+
+    Route::patch(
+        '/messages/message/{message}',
+        [MessageController::class, 'update']
+    )->name('messages.update');
+
+
+    Route::delete(
+        '/messages/message/{message}',
+        [MessageController::class, 'destroy']
+    )->name('messages.destroy');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -339,32 +774,59 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::post('/calls/start/{user}', [CallController::class, 'start'])
-        ->name('calls.start');
+    Route::post(
+        '/calls/start/{user}',
+        [CallController::class, 'start']
+    )->name('calls.start');
 
-    Route::get('/calls/{call}', [CallController::class, 'show'])
-        ->name('calls.show');
 
-    Route::post('/calls/{call}/offer', [CallController::class, 'storeOffer'])
-        ->name('calls.offer');
+    Route::get(
+        '/calls/{call}',
+        [CallController::class, 'show']
+    )->name('calls.show');
 
-    Route::post('/calls/{call}/answer', [CallController::class, 'storeAnswer'])
-        ->name('calls.answer');
 
-    Route::post('/calls/{call}/candidate', [CallController::class, 'storeCandidate'])
-        ->name('calls.candidate');
+    Route::post(
+        '/calls/{call}/offer',
+        [CallController::class, 'storeOffer']
+    )->name('calls.offer');
 
-    Route::get('/calls/{call}/poll', [CallController::class, 'poll'])
-        ->name('calls.poll');
 
-    Route::post('/calls/{call}/accept', [CallController::class, 'accept'])
-        ->name('calls.accept');
+    Route::post(
+        '/calls/{call}/answer',
+        [CallController::class, 'storeAnswer']
+    )->name('calls.answer');
 
-    Route::post('/calls/{call}/reject', [CallController::class, 'reject'])
-        ->name('calls.reject');
 
-    Route::post('/calls/{call}/end', [CallController::class, 'end'])
-        ->name('calls.end');
+    Route::post(
+        '/calls/{call}/candidate',
+        [CallController::class, 'storeCandidate']
+    )->name('calls.candidate');
+
+
+    Route::get(
+        '/calls/{call}/poll',
+        [CallController::class, 'poll']
+    )->name('calls.poll');
+
+
+    Route::post(
+        '/calls/{call}/accept',
+        [CallController::class, 'accept']
+    )->name('calls.accept');
+
+
+    Route::post(
+        '/calls/{call}/reject',
+        [CallController::class, 'reject']
+    )->name('calls.reject');
+
+
+    Route::post(
+        '/calls/{call}/end',
+        [CallController::class, 'end']
+    )->name('calls.end');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -372,32 +834,59 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/donations', [DonationController::class, 'index'])
-        ->name('donations.index');
+    Route::get(
+        '/donations',
+        [DonationController::class, 'index']
+    )->name('donations.index');
 
-    Route::get('/donations/create', [DonationController::class, 'create'])
-        ->name('donations.create');
 
-    Route::post('/donations', [DonationController::class, 'store'])
-        ->name('donations.store');
+    Route::get(
+        '/donations/create',
+        [DonationController::class, 'create']
+    )->name('donations.create');
 
-    Route::get('/donations/{donation}', [DonationController::class, 'show'])
-        ->name('donations.show');
 
-    Route::patch('/donations/{donation}/approve', [DonationController::class, 'approve'])
-        ->name('donations.approve');
+    Route::post(
+        '/donations',
+        [DonationController::class, 'store']
+    )->name('donations.store');
 
-    Route::patch('/donations/{donation}/reject', [DonationController::class, 'reject'])
-        ->name('donations.reject');
 
-    Route::delete('/donations/{donation}', [DonationController::class, 'destroy'])
-        ->name('donations.destroy');
+    Route::get(
+        '/donations/{donation}',
+        [DonationController::class, 'show']
+    )->name('donations.show');
 
-    Route::post('/donations/{donation}/contribute', [DonationContributionController::class, 'store'])
-        ->name('donations.contribute');
 
-    Route::post('/donations/{donation}/manual-payment', [DonationManualPaymentController::class, 'store'])
-        ->name('donations.manual-payment');
+    Route::patch(
+        '/donations/{donation}/approve',
+        [DonationController::class, 'approve']
+    )->name('donations.approve');
+
+
+    Route::patch(
+        '/donations/{donation}/reject',
+        [DonationController::class, 'reject']
+    )->name('donations.reject');
+
+
+    Route::delete(
+        '/donations/{donation}',
+        [DonationController::class, 'destroy']
+    )->name('donations.destroy');
+
+
+    Route::post(
+        '/donations/{donation}/contribute',
+        [DonationContributionController::class, 'store']
+    )->name('donations.contribute');
+
+
+    Route::post(
+        '/donations/{donation}/manual-payment',
+        [DonationManualPaymentController::class, 'store']
+    )->name('donations.manual-payment');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -405,87 +894,232 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::middleware(['role:student,alumni'])->group(function () {
+    Route::middleware(['role:student,alumni'])
+        ->group(function () {
 
-        Route::get('/resume-analyzer', [ResumeAnalysisController::class, 'index'])
-            ->name('resume-analyzer.index');
+            Route::get(
+                '/resume-analyzer',
+                [ResumeAnalysisController::class, 'index']
+            )->name('resume-analyzer.index');
 
-        Route::post('/resume-analyzer', [ResumeAnalysisController::class, 'store'])
-            ->name('resume-analyzer.store');
 
-        Route::delete('/resume-analyzer/{resumeAnalysis}', [ResumeAnalysisController::class, 'destroy'])
-            ->name('resume-analyzer.destroy');
+            Route::post(
+                '/resume-analyzer',
+                [ResumeAnalysisController::class, 'store']
+            )->name('resume-analyzer.store');
+
+
+            Route::delete(
+                '/resume-analyzer/{resumeAnalysis}',
+                [ResumeAnalysisController::class, 'destroy']
+            )->name('resume-analyzer.destroy');
+
+        });
+
+/*
+|--------------------------------------------------------------------------
+| Jobs
+|--------------------------------------------------------------------------
+*/
+
+/*
+|--------------------------------------------------------------------------
+| Job List
+|--------------------------------------------------------------------------
+|
+| All authenticated users can view jobs.
+|
+*/
+
+Route::get(
+    '/jobs',
+    [JobController::class, 'index']
+)->name('jobs.index');
+
+
+/*
+|--------------------------------------------------------------------------
+| Create / Store / Manage Own Jobs
+|--------------------------------------------------------------------------
+|
+| Alumni:
+| - Can submit jobs
+| - Submitted jobs go for approval
+|
+| Admin / Super Admin:
+| - Can manually add jobs
+| - Admin-created jobs can be published directly
+|
+*/
+
+Route::middleware([
+    'role:alumni,admin,super_admin',
+])->group(function () {
+
+    Route::get(
+        '/jobs/create',
+        [JobController::class, 'create']
+    )->name('jobs.create');
+
+
+    Route::post(
+        '/jobs',
+        [JobController::class, 'store']
+    )->name('jobs.store');
+
+
+    Route::get(
+        '/jobs/my-posts',
+        [JobController::class, 'myJobs']
+    )->name('jobs.my');
+
+});
+
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Admin / Super Admin Job Moderation
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware([
+    'role:admin,super_admin',
+])->group(function () {
+
+    Route::patch(
+        '/jobs/{job}/approve',
+        [JobController::class, 'approve']
+    )->name('jobs.approve');
+
+
+    Route::patch(
+        '/jobs/{job}/reject',
+        [JobController::class, 'reject']
+    )->name('jobs.reject');
+
+    Route::delete(
+        '/jobs/{job}',
+        [JobController::class, 'destroy']
+    )->name('jobs.destroy');
+
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Job Details
+|--------------------------------------------------------------------------
+|
+| Important:
+| Keep this route after /jobs/create and /jobs/my-posts.
+|
+*/
+
+Route::get(
+    '/jobs/{job}',
+    [JobController::class, 'show']
+)->name('jobs.show');
+
+
+/*
+|--------------------------------------------------------------------------
+| Mentorship
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['role:student'])
+    ->group(function () {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Mentor List
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/alumni-mentors',
+            [MentorshipController::class, 'index']
+        )->name('mentors.index');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Request Mentorship
+        |--------------------------------------------------------------------------
+        */
+
+        Route::post(
+            '/alumni-mentors/{mentor}/request',
+            [MentorshipController::class, 'requestMentor']
+        )->name('mentors.request');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Cancel Pending Request
+        |--------------------------------------------------------------------------
+        */
+
+        Route::delete(
+            '/mentors/{mentor}/cancel',
+            [MentorshipController::class, 'cancelRequest']
+        )->name('mentors.cancel');
+
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Jobs
-    |--------------------------------------------------------------------------
-    */
 
-    Route::get('/jobs', [JobController::class, 'index'])
-        ->name('jobs.index');
+Route::middleware(['role:alumni'])
+    ->group(function () {
 
-    Route::middleware(['role:alumni'])->group(function () {
+        /*
+        |--------------------------------------------------------------------------
+        | Student Requests
+        |--------------------------------------------------------------------------
+        */
 
-        Route::get('/jobs/create', [JobController::class, 'create'])
-            ->name('jobs.create');
+        Route::get(
+            '/mentorship-requests',
+            [MentorshipController::class, 'myRequests']
+        )->name('mentors.requests');
 
-        Route::post('/jobs', [JobController::class, 'store'])
-            ->name('jobs.store');
 
-        Route::get('/jobs/my-posts', [JobController::class, 'myJobs'])
-            ->name('jobs.my');
-    });
+        /*
+        |--------------------------------------------------------------------------
+        | Accept
+        |--------------------------------------------------------------------------
+        */
 
-    Route::middleware(['role:student'])->group(function () {
+        Route::patch(
+            '/mentorships/{mentorship}/accept',
+            [MentorshipController::class, 'accept']
+        )->name('mentors.accept');
 
-        Route::post('/jobs/{job}/apply', [JobController::class, 'apply'])
-            ->name('jobs.apply');
-    });
 
-    Route::middleware(['role:admin,super_admin'])->group(function () {
+        /*
+        |--------------------------------------------------------------------------
+        | Reject
+        |--------------------------------------------------------------------------
+        */
 
-        Route::patch('/jobs/{job}/approve', [JobController::class, 'approve'])
-            ->name('jobs.approve');
+        Route::patch(
+            '/mentorships/{mentorship}/reject',
+            [MentorshipController::class, 'reject']
+        )->name('mentors.reject');
 
-        Route::patch('/jobs/{job}/reject', [JobController::class, 'reject'])
-            ->name('jobs.reject');
-    });
 
-    Route::get('/jobs/{job}', [JobController::class, 'show'])
-        ->name('jobs.show');
+        /*
+        |--------------------------------------------------------------------------
+        | Complete
+        |--------------------------------------------------------------------------
+        */
 
-    /*
-    |--------------------------------------------------------------------------
-    | Mentorship
-    |--------------------------------------------------------------------------
-    */
+        Route::patch(
+            '/mentorships/{mentorship}/complete',
+            [MentorshipController::class, 'complete']
+        )->name('mentors.complete');
 
-    Route::middleware(['role:student'])->group(function () {
-
-        Route::get('/alumni-mentors', [MentorshipController::class, 'index'])
-            ->name('mentors.index');
-
-        Route::post('/alumni-mentors/{mentor}/request', [MentorshipController::class, 'requestMentor'])
-            ->name('mentors.request');
-            Route::delete('/mentors/{mentor}/cancel', [MentorshipController::class, 'cancelRequest'])
-    ->name('mentors.cancel');
-    });
-    
-    Route::post('/mentors/{mentor}/ai-match', [MentorshipController::class, 'aiMatch'])
-    ->name('mentors.ai-match');
-
-    Route::middleware(['role:alumni'])->group(function () {
-
-        Route::get('/mentorship-requests', [MentorshipController::class, 'myRequests'])
-            ->name('mentors.requests');
-
-        Route::patch('/mentorships/{mentorship}/accept', [MentorshipController::class, 'accept'])
-            ->name('mentors.accept');
-
-        Route::patch('/mentorships/{mentorship}/reject', [MentorshipController::class, 'reject'])
-            ->name('mentors.reject');
     });
 
     /*
@@ -494,35 +1128,62 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/events', [EventController::class, 'index'])
-        ->name('events.index');
+    Route::get(
+        '/events',
+        [EventController::class, 'index']
+    )->name('events.index');
 
-    Route::middleware(['role:alumni,admin,super_admin'])->group(function () {
 
-        Route::get('/events/create', [EventController::class, 'create'])
-            ->name('events.create');
+    Route::middleware(['role:alumni,admin,super_admin'])
+        ->group(function () {
 
-        Route::post('/events', [EventController::class, 'store'])
-            ->name('events.store');
-    });
+            Route::get(
+                '/events/create',
+                [EventController::class, 'create']
+            )->name('events.create');
 
-    Route::middleware(['role:student,alumni'])->group(function () {
 
-        Route::post('/events/{event}/register', [EventController::class, 'register'])
-            ->name('events.register');
-    });
+            Route::post(
+                '/events',
+                [EventController::class, 'store']
+            )->name('events.store');
 
-    Route::middleware(['role:admin,super_admin'])->group(function () {
+        });
 
-        Route::get('/admin/event-participants/pending', [EventController::class, 'pendingParticipants'])
-            ->name('event.participants.pending');
 
-        Route::patch('/event-participants/{participant}/approve', [EventController::class, 'approveParticipant'])
-            ->name('event.participants.approve');
+    Route::middleware(['role:student,alumni'])
+        ->group(function () {
 
-        Route::patch('/event-participants/{participant}/reject', [EventController::class, 'rejectParticipant'])
-            ->name('event.participants.reject');
-    });
+            Route::post(
+                '/events/{event}/register',
+                [EventController::class, 'register']
+            )->name('events.register');
+
+        });
+
+
+    Route::middleware(['role:admin,super_admin'])
+        ->group(function () {
+
+            Route::get(
+                '/admin/event-participants/pending',
+                [EventController::class, 'pendingParticipants']
+            )->name('event.participants.pending');
+
+
+            Route::patch(
+                '/event-participants/{participant}/approve',
+                [EventController::class, 'approveParticipant']
+            )->name('event.participants.approve');
+
+
+            Route::patch(
+                '/event-participants/{participant}/reject',
+                [EventController::class, 'rejectParticipant']
+            )->name('event.participants.reject');
+
+        });
+
 
     /*
     |--------------------------------------------------------------------------
@@ -530,14 +1191,23 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/notifications', [NotificationController::class, 'index'])
-        ->name('notifications.index');
+    Route::get(
+        '/notifications',
+        [NotificationController::class, 'index']
+    )->name('notifications.index');
 
-    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])
-        ->name('notifications.read');
 
-    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])
-        ->name('notifications.readAll');
+    Route::patch(
+        '/notifications/{notification}/read',
+        [NotificationController::class, 'markAsRead']
+    )->name('notifications.read');
+
+
+    Route::patch(
+        '/notifications/read-all',
+        [NotificationController::class, 'markAllAsRead']
+    )->name('notifications.readAll');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -545,15 +1215,65 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/profile', [ProfileController::class, 'edit'])
-        ->name('profile.edit');
+    Route::get(
+        '/profile',
+        [ProfileController::class, 'edit']
+    )->name('profile.edit');
 
-    Route::patch('/profile', [ProfileController::class, 'update'])
-        ->name('profile.update');
 
-    Route::delete('/profile', [ProfileController::class, 'destroy'])
-        ->name('profile.destroy');
+    Route::patch(
+        '/profile',
+        [ProfileController::class, 'update']
+    )->name('profile.update');
+
+
+    Route::delete(
+        '/profile',
+        [ProfileController::class, 'destroy']
+    )->name('profile.destroy');
+
 });
+/*
+|--------------------------------------------------------------------------
+| Alumni Work Experience
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware([
+    'role:alumni',
+])->group(function () {
+
+    Route::post(
+        '/profile/work-experiences',
+        [
+            AlumniWorkExperienceController::class,
+            'store',
+        ]
+    )->name(
+        'profile.work-experiences.store'
+    );
+
+    Route::patch(
+        '/profile/work-experiences/{experience}',
+        [
+            AlumniWorkExperienceController::class,
+            'update',
+        ]
+    )->name(
+        'profile.work-experiences.update'
+    );
+
+    Route::delete(
+        '/profile/work-experiences/{experience}',
+        [
+            AlumniWorkExperienceController::class,
+            'destroy',
+        ]
+    )->name(
+        'profile.work-experiences.destroy'
+    );
+});
+
 
 /*
 |--------------------------------------------------------------------------

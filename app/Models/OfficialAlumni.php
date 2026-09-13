@@ -22,7 +22,11 @@ class OfficialAlumni extends Model
     ];
 
     public function user()
-    {
-        return $this->hasOne(User::class, 'alumni_id');
-    }
+{
+    return $this->hasOne(
+        User::class,
+        'alumni_id',
+        'alumni_id'
+    );
+}
 }

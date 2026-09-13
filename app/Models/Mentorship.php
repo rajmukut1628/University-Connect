@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Mentorship extends Model
 {
@@ -33,5 +33,25 @@ class Mentorship extends Model
     public function student()
     {
         return $this->belongsTo(User::class, 'student_id');
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isAccepted(): bool
+    {
+        return $this->status === 'accepted';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === 'completed';
     }
 }

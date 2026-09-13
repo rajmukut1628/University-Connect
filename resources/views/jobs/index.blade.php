@@ -19,21 +19,41 @@
                     </p>
                 </div>
 
-                @if(auth()->check() && auth()->user()->isAlumni())
-                    <div class="flex flex-wrap gap-3">
-                        <a href="{{ route('jobs.create') }}"
-                           class="px-6 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white font-black shadow-2xl hover:scale-105 transition">
-                            <i class="fas fa-plus mr-2"></i>
-                            Post Job
-                        </a>
+                @if(
+    auth()->check() &&
+    in_array(
+        auth()->user()->role,
+        ['alumni', 'admin', 'super_admin'],
+        true
+    )
+)
+    <div class="flex flex-wrap gap-3">
 
-                        <a href="{{ route('jobs.my') }}"
-                           class="px-6 py-4 rounded-2xl border border-white/10 bg-white/10 text-white font-black shadow-xl hover:scale-105 hover:bg-white/15 transition">
-                            <i class="fas fa-folder-open mr-2"></i>
-                            Manage My Jobs
-                        </a>
-                    </div>
-                @endif
+        <a
+            href="{{ route('jobs.create') }}"
+            class="px-6 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white font-black shadow-2xl hover:scale-105 transition"
+        >
+            <i class="fas fa-plus mr-2"></i>
+
+            @if(in_array(auth()->user()->role, ['admin', 'super_admin'], true))
+                Add Job
+            @else
+                Post Job
+            @endif
+        </a>
+
+        @if(auth()->user()->isAlumni())
+            <a
+                href="{{ route('jobs.my') }}"
+                class="px-6 py-4 rounded-2xl border border-white/10 bg-white/10 text-white font-black shadow-xl hover:scale-105 hover:bg-white/15 transition"
+            >
+                <i class="fas fa-folder-open mr-2"></i>
+                Manage My Jobs
+            </a>
+        @endif
+
+    </div>
+@endif
             </div>
         </div>
     </x-slot>
@@ -119,13 +139,14 @@
                         'from'  => 'from-amber-400',
                         'to'    => 'to-orange-600',
                     ],
-                    [
-                        'title' => 'Applications',
-                        'value' => $stats['applications'] ?? 0,
-                        'icon'  => 'fa-file-lines',
-                        'from'  => 'from-pink-400',
-                        'to'    => 'to-fuchsia-600',
-                    ],
+
+                               [
+                             'title' => 'Rejected',
+                             'value' => $stats['rejected_jobs'] ?? 0,
+                           'icon'  => 'fa-circle-xmark',
+                          'from'  => 'from-red-400',
+                          'to'    => 'to-rose-600',
+                           ],
                 ];
             } else {
                 $cards = [
@@ -267,6 +288,28 @@
                                 View
                             </a>
                         </div>
+                        @if(auth()->check() && auth()->user()->isAdmin())
+
+    <form
+        method="POST"
+        action="{{ route('jobs.destroy', $job) }}"
+        onsubmit="return confirm('Are you sure you want to delete this job post? This action cannot be undone.')"
+        class="mt-3"
+    >
+        @csrf
+        @method('DELETE')
+
+        <button
+            type="submit"
+            class="w-full rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2 text-red-600 dark:text-red-300 font-black hover:bg-red-500 hover:text-white transition"
+        >
+            <i class="fas fa-trash mr-2"></i>
+            Delete Job
+        </button>
+
+    </form>
+
+@endif
 
                         @if(auth()->check() && auth()->user()->isAdmin() && $job->status === 'pending')
                             <div class="mt-4 flex gap-2">

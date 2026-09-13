@@ -14,10 +14,6 @@
                     <h2 class="mt-3 text-4xl lg:text-5xl font-black text-white">
                         {{ auth()->user()->role === 'super_admin' ? 'Super Admin Command Center' : 'Administrative Command Center' }}
                     </h2>
-
-                    <p class="mt-3 text-slate-300 max-w-2xl">
-                        Real-time analytics for users, jobs, mentorships, events, messages and platform health.
-                    </p>
                 </div>
 
                 <div class="flex items-center gap-4">

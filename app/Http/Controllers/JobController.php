@@ -2,180 +2,738 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\JobApplication;
 use App\Models\JobPosting;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class JobController extends Controller
 {
+    /*
+    |--------------------------------------------------------------------------
+    | Job List
+    |--------------------------------------------------------------------------
+    |
+    | Admin/Super Admin:
+    | - See all jobs
+    |
+    | Student/Alumni:
+    | - See approved jobs only
+    |
+    */
+
     public function index(Request $request)
     {
-        $query = JobPosting::with('postedBy')
-            ->when($request->user()->role === 'student', function ($q) {
-                $q->where('status', 'approved');
-            })
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $search = $request->search;
+        $user = $request->user();
 
-                $q->where(function ($inner) use ($search) {
-                    $inner->where('title', 'like', "%{$search}%")
-                        ->orWhere('company_name', 'like', "%{$search}%")
-                        ->orWhere('location', 'like', "%{$search}%")
-                        ->orWhere('type', 'like', "%{$search}%")
-                        ->orWhere('requirements', 'like', "%{$search}%");
-                });
-            })
-            ->when($request->filled('type'), function ($q) use ($request) {
-                $q->where('type', $request->type);
-            })
-            ->latest();
+        $query = JobPosting::with('postedBy');
 
-        $jobs = $query->paginate(9)->withQueryString();
+        /*
+        |--------------------------------------------------------------------------
+        | Public User View
+        |--------------------------------------------------------------------------
+        */
 
-        $stats = [
-            'total_jobs' => JobPosting::count(),
-            'approved_jobs' => JobPosting::where('status', 'approved')->count(),
-            'pending_jobs' => JobPosting::where('status', 'pending')->count(),
-            'applications' => Schema::hasTable('job_applications')
-                ? DB::table('job_applications')->count()
-                : 0,
-        ];
+        if (!in_array(
+            $user->role,
+            ['admin', 'super_admin'],
+            true
+        )) {
+            $query->where(
+                'status',
+                'approved'
+            );
+        }
 
-        return view('jobs.index', compact('jobs', 'stats'));
+
+        /*
+        |--------------------------------------------------------------------------
+        | Search
+        |--------------------------------------------------------------------------
+        */
+
+        if ($request->filled('search')) {
+
+            $search = trim(
+                $request->search
+            );
+
+            $query->where(function ($inner) use ($search) {
+
+                $inner
+                    ->where(
+                        'title',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'company_name',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'location',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'type',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'requirements',
+                        'like',
+                        "%{$search}%"
+                    );
+            });
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Type Filter
+        |--------------------------------------------------------------------------
+        */
+
+        if ($request->filled('type')) {
+
+            $query->where(
+                'type',
+                $request->type
+            );
+        }
+
+
+        $jobs = $query
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Statistics
+        |--------------------------------------------------------------------------
+        */
+
+        if (in_array(
+            $user->role,
+            ['admin', 'super_admin'],
+            true
+        )) {
+
+            $stats = [
+
+                'total_jobs' =>
+                    JobPosting::count(),
+
+                'approved_jobs' =>
+                    JobPosting::where(
+                        'status',
+                        'approved'
+                    )->count(),
+
+                'pending_jobs' =>
+                    JobPosting::where(
+                        'status',
+                        'pending'
+                    )->count(),
+
+                'rejected_jobs' =>
+                    JobPosting::where(
+                        'status',
+                        'rejected'
+                    )->count(),
+            ];
+
+        } else {
+
+            $stats = [
+
+                'total_jobs' =>
+                    JobPosting::where(
+                        'status',
+                        'approved'
+                    )->count(),
+            ];
+        }
+
+
+        return view(
+            'jobs.index',
+            compact(
+                'jobs',
+                'stats'
+            )
+        );
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Create Job
+    |--------------------------------------------------------------------------
+    */
 
     public function create()
     {
-        if (!auth()->user()->isAlumni() && !auth()->user()->isAdmin()) {
-            abort(403, 'Only alumni or admin can post jobs.');
-        }
+        $user = auth()->user();
 
-        return view('jobs.create');
+        abort_unless(
+            in_array(
+                $user->role,
+                [
+                    'alumni',
+                    'admin',
+                    'super_admin',
+                ],
+                true
+            ),
+            403,
+            'You are not allowed to post jobs.'
+        );
+
+        return view(
+            'jobs.create'
+        );
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Store Job
+    |--------------------------------------------------------------------------
+    */
 
     public function store(Request $request)
     {
-        if (!auth()->user()->isAlumni() && !auth()->user()->isAdmin()) {
-            abort(403, 'Only alumni or admin can post jobs.');
-        }
+        $user = $request->user();
+
+        abort_unless(
+            in_array(
+                $user->role,
+                [
+                    'alumni',
+                    'admin',
+                    'super_admin',
+                ],
+                true
+            ),
+            403
+        );
+
 
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'company_name' => ['required', 'string', 'max:255'],
-            'location' => ['nullable', 'string', 'max:255'],
-            'type' => ['required', 'in:full_time,part_time,internship,remote,hybrid'],
-            'experience_level' => ['nullable', 'string', 'max:255'],
-            'salary_range' => ['nullable', 'string', 'max:255'],
-            'positions_available' => ['required', 'integer', 'min:1'],
-            'deadline' => ['nullable', 'date'],
-            'description' => ['required', 'string'],
-            'requirements' => ['nullable', 'string'],
-            'benefits' => ['nullable', 'string'],
+
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'company_name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'type' => [
+                'required',
+                'string',
+                'in:full_time,part_time,internship,contract,temporary,remote,hybrid',
+            ],
+
+            'location' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'salary_range' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'positions_available' => [
+                'required',
+                'integer',
+                'min:1',
+                'max:10000',
+            ],
+
+            'contact_email' => [
+                'nullable',
+                'email',
+                'max:255',
+                'required_without:contact_phone',
+            ],
+
+            'contact_phone' => [
+                'nullable',
+                'string',
+                'max:30',
+                'required_without:contact_email',
+            ],
+
+            'application_url' => [
+                'nullable',
+                'url',
+                'max:255',
+            ],
+
+            'description' => [
+                'required',
+                'string',
+                'max:5000',
+            ],
+
+            'requirements' => [
+                'required',
+                'string',
+                'max:5000',
+            ],
+
+            'deadline' => [
+                'nullable',
+                'date',
+                'after_or_equal:today',
+            ],
         ]);
 
-        $validated['posted_by'] = auth()->id();
-        $validated['status'] = auth()->user()->isAdmin() ? 'approved' : 'pending';
 
-        JobPosting::create($validated);
+        /*
+        |--------------------------------------------------------------------------
+        | Default Existing Database Fields
+        |--------------------------------------------------------------------------
+        */
 
-        return redirect()
-            ->route('jobs.index')
-            ->with('success', 'Job posted successfully. Waiting for admin approval.');
-    }
+        $validated['experience_level'] =
+            'entry';
 
-    public function show(JobPosting $job)
-    {
-        if (auth()->user()->isStudent() && $job->status !== 'approved') {
-            abort(403, 'This job is not approved yet.');
+        $validated['posted_by'] =
+            $user->id;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Role Based Publishing
+        |--------------------------------------------------------------------------
+        |
+        | Alumni      -> Pending
+        |
+        | Admin       -> Approved
+        | Super Admin -> Approved
+        |
+        */
+
+        $validated['status'] =
+            in_array(
+                $user->role,
+                [
+                    'admin',
+                    'super_admin',
+                ],
+                true
+            )
+                ? 'approved'
+                : 'pending';
+
+
+        $job = JobPosting::create(
+            $validated
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Alumni Submission
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->role === 'alumni') {
+
+            NotificationService::management(
+                'job_submitted',
+                'New Job Submitted',
+                $user->name .
+                    ' submitted "' .
+                    $job->title .
+                    '" for approval.',
+                route(
+                    'jobs.show',
+                    $job
+                ),
+                'high',
+                $job,
+                $user
+            );
+
+
+            return redirect()
+                ->route(
+                    'jobs.my'
+                )
+                ->with(
+                    'success',
+                    'Job submitted successfully. It is waiting for Admin approval.'
+                );
         }
 
-        $job->load(['postedBy', 'applications']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin / Super Admin Submission
+        |--------------------------------------------------------------------------
+        */
+
+        return redirect()
+            ->route(
+                'jobs.index'
+            )
+            ->with(
+                'success',
+                'Job added and published successfully.'
+            );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Show Job
+    |--------------------------------------------------------------------------
+    */
+
+    public function show(
+        JobPosting $job
+    ) {
+        $user = auth()->user();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Student / Alumni Can Only View Approved Jobs
+        |--------------------------------------------------------------------------
+        |
+        | Alumni poster can still view their own pending/rejected job.
+        |
+        */
+
+        if (!in_array(
+            $user->role,
+            ['admin', 'super_admin'],
+            true
+        )) {
+
+            $isOwner =
+                $user->role === 'alumni'
+                && (int) $job->posted_by ===
+                    (int) $user->id;
+
+
+            if (
+                $job->status !== 'approved'
+                && !$isOwner
+            ) {
+                abort(
+                    404
+                );
+            }
+        }
+
+
+        $job->load([
+            'postedBy',
+        ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Compatibility
+        |--------------------------------------------------------------------------
+        |
+        | Existing Blade may still expect this variable.
+        |
+        */
 
         $alreadyApplied = false;
 
-        if (Schema::hasTable('job_applications')) {
-            $alreadyApplied = JobApplication::where('job_id', $job->id)
-                ->where('applicant_id', auth()->id())
-                ->exists();
-        }
 
-        return view('jobs.show', compact('job', 'alreadyApplied'));
+        return view(
+            'jobs.show',
+            compact(
+                'job',
+                'alreadyApplied'
+            )
+        );
     }
 
-    public function apply(Request $request, JobPosting $job)
-    {
-        if (!auth()->user()->isStudent()) {
-            abort(403, 'Only students can apply for jobs.');
-        }
 
-        if ($job->status !== 'approved') {
-            return back()->withErrors([
-                'job' => 'This job is not approved yet.',
-            ]);
-        }
+    /*
+    |--------------------------------------------------------------------------
+    | Approve Job
+    |--------------------------------------------------------------------------
+    */
 
-        if (!Schema::hasTable('job_applications')) {
-            return back()->withErrors([
-                'job' => 'Job applications table is missing.',
-            ]);
-        }
+    public function approve(
+        JobPosting $job
+    ) {
+        $admin = auth()->user();
 
-        $request->validate([
-            'cover_letter' => ['nullable', 'string', 'max:3000'],
-        ]);
-
-        JobApplication::firstOrCreate(
-            [
-                'job_id' => $job->id,
-                'applicant_id' => auth()->id(),
-            ],
-            [
-                'cover_letter' => $request->cover_letter,
-                'status' => 'pending',
-            ]
+        abort_unless(
+            in_array(
+                $admin->role,
+                [
+                    'admin',
+                    'super_admin',
+                ],
+                true
+            ),
+            403
         );
 
-        return back()->with('success', 'Application submitted successfully.');
-    }
 
-    public function approve(JobPosting $job)
-    {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'Only admin can approve jobs.');
+        if (
+            $job->status === 'approved'
+        ) {
+            return back()->with(
+                'success',
+                'Job is already approved.'
+            );
         }
+
 
         $job->update([
             'status' => 'approved',
         ]);
 
-        return back()->with('success', 'Job approved successfully.');
+
+        $job->loadMissing(
+            'postedBy'
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Notify Alumni Poster
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $job->postedBy
+            && $job->postedBy->role ===
+                'alumni'
+        ) {
+
+            NotificationService::personal(
+                $job->postedBy,
+                'job_posting_approved',
+                'Job Approved',
+                'Your job post "' .
+                    $job->title .
+                    '" has been approved and published.',
+                route(
+                    'jobs.show',
+                    $job
+                ),
+                'high',
+                $job,
+                $admin
+            );
+        }
+
+
+        NotificationService::management(
+            'job_approved',
+            'Job Approved',
+            $admin->name .
+                ' approved "' .
+                $job->title .
+                '".',
+            route(
+                'jobs.show',
+                $job
+            ),
+            'medium',
+            $job,
+            $admin
+        );
+
+
+        return back()->with(
+            'success',
+            'Job approved successfully.'
+        );
     }
 
-    public function reject(JobPosting $job)
-    {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'Only admin can reject jobs.');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reject Job
+    |--------------------------------------------------------------------------
+    */
+
+    public function reject(
+        JobPosting $job
+    ) {
+        $admin = auth()->user();
+
+        abort_unless(
+            in_array(
+                $admin->role,
+                [
+                    'admin',
+                    'super_admin',
+                ],
+                true
+            ),
+            403
+        );
+
+
+        if (
+            $job->status === 'rejected'
+        ) {
+            return back()->with(
+                'success',
+                'Job is already rejected.'
+            );
         }
+
 
         $job->update([
             'status' => 'rejected',
         ]);
 
-        return back()->with('success', 'Job rejected successfully.');
+
+        $job->loadMissing(
+            'postedBy'
+        );
+
+
+        if (
+            $job->postedBy
+            && $job->postedBy->role ===
+                'alumni'
+        ) {
+
+            NotificationService::personal(
+                $job->postedBy,
+                'job_posting_rejected',
+                'Job Rejected',
+                'Your job post "' .
+                    $job->title .
+                    '" was not approved.',
+                route(
+                    'jobs.show',
+                    $job
+                ),
+                'high',
+                $job,
+                $admin
+            );
+        }
+
+
+        NotificationService::management(
+            'job_rejected',
+            'Job Rejected',
+            $admin->name .
+                ' rejected "' .
+                $job->title .
+                '".',
+            null,
+            'medium',
+            $job,
+            $admin
+        );
+
+
+        return back()->with(
+            'success',
+            'Job rejected successfully.'
+        );
     }
+
+     public function destroy(JobPosting $job)
+{
+    $user = auth()->user();
+
+    abort_unless(
+        in_array(
+            $user->role,
+            [
+                'admin',
+                'super_admin',
+            ],
+            true
+        ),
+        403,
+        'Only Admin or Super Admin can delete job posts.'
+    );
+
+    $title = $job->title;
+
+    $job->delete();
+
+    NotificationService::management(
+        'job_deleted',
+        'Job Deleted',
+        $user->name .
+            ' deleted the job post "' .
+            $title .
+            '".',
+        null,
+        'medium',
+        null,
+        $user
+    );
+
+    return redirect()
+        ->route('jobs.index')
+        ->with(
+            'success',
+            'Job deleted successfully.'
+        );
+}
+    /*
+    |--------------------------------------------------------------------------
+    | My Posted Jobs
+    |--------------------------------------------------------------------------
+    */
 
     public function myJobs()
     {
-        if (!auth()->user()->isAlumni() && !auth()->user()->isAdmin()) {
-            abort(403, 'Only alumni or admin can access posted jobs.');
-        }
+        $user = auth()->user();
 
-        $jobs = JobPosting::where('posted_by', auth()->id())
+
+        abort_unless(
+            in_array(
+                $user->role,
+                [
+                    'alumni',
+                    'admin',
+                    'super_admin',
+                ],
+                true
+            ),
+            403
+        );
+
+
+        $jobs = JobPosting::where(
+            'posted_by',
+            $user->id
+        )
             ->latest()
             ->paginate(10);
 
-        return view('jobs.my-jobs', compact('jobs'));
+
+        return view(
+            'jobs.my-jobs',
+            compact(
+                'jobs'
+            )
+        );
     }
 }

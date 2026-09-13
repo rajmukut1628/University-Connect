@@ -443,13 +443,25 @@
         'roles'  => ['student', 'alumni'],
     ];
 
-    $navItems[] = [
-        'label'  => 'Mentors',
-        'icon'   => 'fa-user-tie',
-        'route'  => Route::has('mentors.index') ? route('mentors.index') : '#',
-        'active' => request()->routeIs('mentors.*'),
-        'roles'  => ['student', 'alumni'],
-    ];
+   $mentorRoute = match ($role) {
+    'student' => Route::has('mentors.index')
+        ? route('mentors.index')
+        : '#',
+
+    'alumni' => Route::has('mentors.requests')
+        ? route('mentors.requests')
+        : '#',
+
+    default => '#',
+};
+
+$navItems[] = [
+    'label'  => 'Mentors',
+    'icon'   => 'fa-user-tie',
+    'route'  => $mentorRoute,
+    'active' => request()->routeIs('mentors.*'),
+    'roles'  => ['student', 'alumni'],
+];
 
     $navItems[] = [
         'label'  => 'Jobs',
@@ -475,49 +487,68 @@
         'roles'  => $allUserRoles,
     ];
 
+   $navItems[] = [
+    'label'  => 'Messages',
+    'icon'   => 'fa-message',
+    'route'  => Route::has('messages.index')
+        ? route('messages.index')
+        : '#',
+    'active' => request()->routeIs('messages.*'),
+    'roles'  => ['student', 'alumni'],
+];
+
+    /*
+|--------------------------------------------------------------------------
+| Admin + Super Admin Management Navigation
+|--------------------------------------------------------------------------
+*/
+
+if (in_array($role, ['admin', 'super_admin'], true)) {
+
     $navItems[] = [
-        'label'  => 'Messages',
-        'icon'   => 'fa-message',
-        'route'  => Route::has('messages.index') ? route('messages.index') : '#',
-        'active' => request()->routeIs('messages.*'),
-        'roles'  => $allUserRoles,
+        'label'  => 'Verification',
+        'icon'   => 'fa-user-check',
+        'route'  => Route::has('superadmin.verification.index')
+            ? route('superadmin.verification.index')
+            : '#',
+        'active' => request()->routeIs(
+            'superadmin.verification.*',
+            'admin.verification.*'
+        ),
+        'roles'  => ['admin', 'super_admin'],
+    ];
+
+    $navItems[] = [
+        'label'  => 'Users',
+        'icon'   => 'fa-users-cog',
+        'route'  => Route::has('superadmin.users.index')
+            ? route('superadmin.users.index')
+            : '#',
+        'active' => request()->routeIs(
+            'superadmin.users.*',
+            'admin.users.*'
+        ),
+        'roles'  => ['admin', 'super_admin'],
+    ];
+
+    $navItems[] = [
+        'label'  => 'Verified DB',
+        'icon'   => 'fa-database',
+        'route'  => Route::has('superadmin.verified-users.index')
+            ? route('superadmin.verified-users.index')
+            : '#',
+        'active' => request()->routeIs(
+            'superadmin.verified-users.*'
+        ),
+        'roles'  => ['admin', 'super_admin'],
     ];
 
     /*
     |--------------------------------------------------------------------------
-    | Super Admin Exclusive Navigation
+    | Only Super Admin Can Create General Admin
     |--------------------------------------------------------------------------
     */
     if ($role === 'super_admin') {
-        $navItems[] = [
-            'label'  => 'Verification',
-            'icon'   => 'fa-user-check',
-            'route'  => Route::has('superadmin.verification.index')
-                ? route('superadmin.verification.index')
-                : '#',
-            'active' => request()->routeIs('superadmin.verification.*'),
-            'roles'  => ['super_admin'],
-        ];
-
-        $navItems[] = [
-            'label'  => 'Users',
-            'icon'   => 'fa-users-cog',
-            'route'  => Route::has('superadmin.users.index')
-                ? route('superadmin.users.index')
-                : '#',
-            'active' => request()->routeIs('superadmin.users.*'),
-            'roles'  => ['super_admin'],
-        ];
-
-        $navItems[] = [
-            'label'  => 'Verified DB',
-            'icon'   => 'fa-database',
-            'route'  => Route::has('superadmin.verified-users.index')
-                ? route('superadmin.verified-users.index')
-                : '#',
-            'active' => request()->routeIs('superadmin.verified-users.*'),
-            'roles'  => ['super_admin'],
-        ];
 
         $navItems[] = [
             'label'  => 'Create Admin',
@@ -525,10 +556,13 @@
             'route'  => Route::has('superadmin.admins.create')
                 ? route('superadmin.admins.create')
                 : '#',
-            'active' => request()->routeIs('superadmin.admins.*'),
+            'active' => request()->routeIs(
+                'superadmin.admins.*'
+            ),
             'roles'  => ['super_admin'],
         ];
     }
+}
 @endphp
 
 <div class="uc-app-shell relative overflow-hidden">

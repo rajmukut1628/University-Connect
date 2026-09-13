@@ -170,7 +170,7 @@
 
                 <div>
                     <label class="block text-sm font-black text-slate-700 dark:text-slate-300 mb-2">
-                        Amount ({{ strtoupper(config('services.stripe.currency', 'usd')) }})
+                        Amount ({{ strtoupper(config('services.stripe.currency', 'TAKA')) }})
                     </label>
 
                     <input type="number"

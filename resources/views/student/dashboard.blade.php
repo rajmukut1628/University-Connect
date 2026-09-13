@@ -13,10 +13,6 @@
                     <h2 class="mt-3 text-4xl lg:text-5xl font-black text-white">
                         Welcome, {{ Auth::user()->name }}
                     </h2>
-
-                    <p class="mt-3 text-slate-300 max-w-2xl">
-                        Your smart student dashboard for jobs, mentorship, alumni networking and career growth.
-                    </p>
                 </div>
 
                 <div class="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-xl px-6 py-4">
@@ -247,11 +243,6 @@
                                 <h3 class="mt-4 text-3xl font-black text-white">
                                     Study, Career & Life Guidance
                                 </h3>
-
-                                <p class="mt-3 text-sm text-slate-300 max-w-2xl">
-                                    Ask anything about study, CV, internship, programming, career, communication,
-                                    mentorship, projects, leadership or personal growth.
-                                </p>
                             </div>
 
                             <div class="hidden md:flex h-16 w-16 rounded-3xl bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 items-center justify-center shadow-2xl shadow-cyan-500/30 uc-float">

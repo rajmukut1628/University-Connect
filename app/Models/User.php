@@ -20,8 +20,10 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'official_id',
         'password',
         'role',
+        'is_owner',
 
         'phone',
         'department',
@@ -40,16 +42,23 @@ class User extends Authenticatable
 
         'alumni_id',
         'student_id',
+
+        'alumni_since',
+        'converted_from_student_at',
+        'converted_by',
+
         'github_url',
         'linkedin_url',
-         'portfolio_url',
-         'current_company',
+        'portfolio_url',
+
+        'current_company',
         'current_designation',
-         'current_job_type',
+        'current_job_type',
         'work_experience_years',
-         'previous_company',
-          'previous_designation',
-          'previous_job_details',
+
+        'previous_company',
+        'previous_designation',
+        'previous_job_details',
     ];
 
     /*
@@ -70,11 +79,14 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'email_verified'    => 'boolean',
-            'is_active'         => 'boolean',
-            'is_blocked'        => 'boolean',
+            'email_verified_at'          => 'datetime',
+            'password'                   => 'hashed',
+            'email_verified'             => 'boolean',
+            'is_active'                  => 'boolean',
+            'is_blocked'                 => 'boolean',
+            'is_owner'                   => 'boolean',
+            'alumni_since'               => 'datetime',
+            'converted_from_student_at'  => 'datetime',
         ];
     }
 
@@ -86,78 +98,156 @@ class User extends Authenticatable
 
     public function officialStudent()
     {
-        return $this->belongsTo(OfficialStudent::class, 'student_id');
+        return $this->belongsTo(
+            OfficialStudent::class,
+            'student_id'
+        );
     }
+    public function workExperiences()
+{
+    return $this->hasMany(
+        AlumniWorkExperience::class,
+        'user_id'
+    )->orderByDesc('is_current')
+      ->orderByDesc('start_date');
+}
+public function currentWorkExperience()
+{
+    return $this->hasOne(
+        AlumniWorkExperience::class,
+        'user_id'
+    )
+    ->where('is_current', true)
+    ->latestOfMany();
+}
 
     public function officialAlumni()
     {
-        return $this->belongsTo(OfficialAlumni::class, 'alumni_id');
+        return $this->belongsTo(
+            OfficialAlumni::class,
+            'alumni_id',
+            'alumni_id'
+        );
+    }
+
+    public function convertedBy()
+    {
+        return $this->belongsTo(
+            User::class,
+            'converted_by'
+        );
+    }
+
+    public function convertedUsers()
+    {
+        return $this->hasMany(
+            User::class,
+            'converted_by'
+        );
     }
 
     public function mentorships()
     {
-        return $this->hasMany(Mentorship::class, 'mentor_id');
+        return $this->hasMany(
+            Mentorship::class,
+            'mentor_id'
+        );
     }
 
     public function mentees()
     {
-        return $this->hasMany(Mentorship::class, 'student_id');
+        return $this->hasMany(
+            Mentorship::class,
+            'student_id'
+        );
     }
 
     public function createdEvents()
     {
-        return $this->hasMany(Event::class, 'created_by');
+        return $this->hasMany(
+            Event::class,
+            'created_by'
+        );
     }
 
     public function eventParticipations()
     {
-        return $this->hasMany(EventParticipant::class, 'user_id');
+        return $this->hasMany(
+            EventParticipant::class,
+            'user_id'
+        );
     }
 
     public function postedJobs()
     {
-        return $this->hasMany(JobPosting::class, 'posted_by');
+        return $this->hasMany(
+            JobPosting::class,
+            'posted_by'
+        );
     }
 
     public function jobApplications()
     {
-        return $this->hasMany(JobApplication::class, 'applicant_id');
+        return $this->hasMany(
+            JobApplication::class,
+            'applicant_id'
+        );
     }
 
     public function sentMessages()
     {
-        return $this->hasMany(Message::class, 'sender_id');
+        return $this->hasMany(
+            Message::class,
+            'sender_id'
+        );
     }
 
     public function receivedMessages()
     {
-        return $this->hasMany(Message::class, 'recipient_id');
+        return $this->hasMany(
+            Message::class,
+            'recipient_id'
+        );
     }
 
     public function notifications()
     {
-        return $this->hasMany(Notification::class, 'user_id');
+        return $this->hasMany(
+            Notification::class,
+            'user_id'
+        );
     }
 
     public function activityLogs()
     {
-        return $this->hasMany(ActivityLog::class, 'user_id');
+        return $this->hasMany(
+            ActivityLog::class,
+            'user_id'
+        );
     }
 
     public function blockedUsers()
     {
-        return $this->hasMany(BlockedUser::class, 'blocked_by');
+        return $this->hasMany(
+            BlockedUser::class,
+            'blocked_by'
+        );
     }
 
     public function blockedByUsers()
     {
-        return $this->hasMany(BlockedUser::class, 'user_id');
+        return $this->hasMany(
+            BlockedUser::class,
+            'user_id'
+        );
     }
+
     public function aiSuggestions()
-{
-    return $this->hasMany(\App\Models\AISuggestion::class);
-}
-    
+    {
+        return $this->hasMany(
+            \App\Models\AISuggestion::class
+        );
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -165,41 +255,42 @@ class User extends Authenticatable
     |--------------------------------------------------------------------------
     */
 
-    /**
-     * Returns true for both Admin and Super Admin.
-     */
     public function isAdmin(): bool
     {
-        return in_array($this->role, ['admin', 'super_admin']);
+        return in_array(
+            $this->role,
+            ['admin', 'super_admin'],
+            true
+        );
     }
 
-    /**
-     * Returns true only for Super Admin.
-     */
     public function isSuperAdmin(): bool
     {
         return $this->role === 'super_admin';
     }
 
-    /**
-     * Returns true only for General Admin.
-     */
+    public function isOwner(): bool
+    {
+        return $this->role === 'super_admin'
+            && $this->is_owner === true;
+    }
+
+    public function isNormalSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin'
+            && !$this->is_owner;
+    }
+
     public function isGeneralAdmin(): bool
     {
         return $this->role === 'admin';
     }
 
-    /**
-     * Returns true only for Student.
-     */
     public function isStudent(): bool
     {
         return $this->role === 'student';
     }
 
-    /**
-     * Returns true only for Alumni.
-     */
     public function isAlumni(): bool
     {
         return $this->role === 'alumni';
@@ -214,19 +305,21 @@ class User extends Authenticatable
     public function getProfileImageUrl(): string
     {
         if (empty($this->profile_image)) {
-            return 'https://ui-avatars.com/api/?name=' .
-                urlencode($this->name) .
-                '&background=6366f1&color=ffffff&size=256';
+            return 'https://ui-avatars.com/api/?name='
+                . urlencode($this->name)
+                . '&background=6366f1&color=ffffff&size=256';
         }
 
         if (
-            str_starts_with($this->profile_image, 'http://') ||
-            str_starts_with($this->profile_image, 'https://')
+            str_starts_with($this->profile_image, 'http://')
+            || str_starts_with($this->profile_image, 'https://')
         ) {
             return $this->profile_image;
         }
 
-        return asset('storage/' . ltrim($this->profile_image, '/'));
+        return asset(
+            'storage/' .
+            ltrim($this->profile_image, '/')
+        );
     }
 }
-

@@ -19,7 +19,7 @@ class StripeDonationController extends Controller
         Stripe::setApiKey(config('services.stripe.secret'));
 
         $amount = round($request->amount, 2);
-        $currency = config('services.stripe.currency', 'usd');
+        $currency = config('services.stripe.currency', 'TAKA');
 
         $session = Session::create([
             'payment_method_types' => ['card'],

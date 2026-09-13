@@ -12,34 +12,76 @@ use Illuminate\View\View;
 class PasswordResetLinkController extends Controller
 {
     /**
-     * Display the password reset link request view.
+     * Show forgot password page.
      */
     public function create(): View
     {
         return view('auth.forgot-password');
     }
 
+
     /**
-     * Handle an incoming password reset link request.
+     * Send password reset link.
      *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
-            'email' => ['required', 'email'],
+        /*
+        |--------------------------------------------------------------------------
+        | Validate Email
+        |--------------------------------------------------------------------------
+        */
+
+        $validated = $request->validate([
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+            ],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        /*
+        |--------------------------------------------------------------------------
+        | Send Reset Link
+        |--------------------------------------------------------------------------
+        */
+
+        $status = Password::sendResetLink([
+            'email' => strtolower(
+                trim($validated['email'])
+            ),
+        ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Success
+        |--------------------------------------------------------------------------
+        */
+
+        if ($status === Password::RESET_LINK_SENT) {
+
+            return back()->with(
+                'status',
+                'A password reset link has been sent to your registered email address. Please check your inbox and spam folder.'
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Error
+        |--------------------------------------------------------------------------
+        */
+
+        return back()
+            ->withInput([
+                'email' => $validated['email'],
+            ])
+            ->withErrors([
+                'email' => __($status),
+            ]);
     }
 }

@@ -11,15 +11,78 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    /*
+    |--------------------------------------------------------------------------
+    | Edit Profile
+    |--------------------------------------------------------------------------
+    */
     public function edit(Request $request): View
     {
         $user = $request->user();
 
-        $profileScore = $this->calculateProfileScore($user);
-        $profileSuggestions = $this->generateProfileSuggestions($user, $profileScore);
-        $profileStrength = app(ProfileStrengthService::class)->analyze($user);
+        /*
+        |--------------------------------------------------------------------------
+        | Load Alumni Work Experiences
+        |--------------------------------------------------------------------------
+        |
+        | Only alumni need professional work-history records.
+        |
+        */
+        if ($user->isAlumni()) {
+            $user->load([
+                'workExperiences',
+            ]);
+        }
 
-        return view('profile.edit', [
+        $profileScore = $this->calculateProfileScore($user);
+
+        $profileSuggestions = $this->generateProfileSuggestions(
+            $user,
+            $profileScore
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Existing AI Profile Strength Service
+        |--------------------------------------------------------------------------
+        |
+        | We preserve your existing service so nothing currently depending on
+        | it is broken.
+        |
+        */
+        $profileStrength = app(ProfileStrengthService::class)
+            ->analyze($user);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Role Based Views
+        |--------------------------------------------------------------------------
+        */
+        if ($user->isStudent()) {
+            return view('profile.student-edit', [
+                'user' => $user,
+                'profileScore' => $profileScore,
+                'profileSuggestions' => $profileSuggestions,
+                'profileStrength' => $profileStrength,
+            ]);
+        }
+
+        if ($user->isAlumni()) {
+            return view('profile.alumni-edit', [
+                'user' => $user,
+                'profileScore' => $profileScore,
+                'profileSuggestions' => $profileSuggestions,
+                'profileStrength' => $profileStrength,
+                'workExperiences' => $user->workExperiences,
+            ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin + Super Admin
+        |--------------------------------------------------------------------------
+        */
+        return view('profile.admin-edit', [
             'user' => $user,
             'profileScore' => $profileScore,
             'profileSuggestions' => $profileSuggestions,
@@ -27,60 +90,217 @@ class ProfileController extends Controller
         ]);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Update Profile
+    |--------------------------------------------------------------------------
+    */
     public function update(Request $request): RedirectResponse
     {
         $user = $request->user();
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'department' => ['nullable', 'string', 'max:255'],
-            'batch' => ['nullable', 'string', 'max:100'],
-            'skills' => ['nullable', 'string', 'max:1000'],
-            'bio' => ['nullable', 'string', 'max:2000'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'profile_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        /*
+        |--------------------------------------------------------------------------
+        | Common Fields
+        |--------------------------------------------------------------------------
+        */
+        $rules = [
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
 
-            // Social / Professional Links
-            'github_url' => ['nullable', 'url', 'max:255'],
-            'linkedin_url' => ['nullable', 'url', 'max:255'],
-            'portfolio_url' => ['nullable', 'url', 'max:255'],
-            'current_company' => ['nullable', 'string', 'max:255'],
-            'current_designation' => ['nullable', 'string', 'max:255'],
-            'current_job_type' => ['nullable', 'string', 'max:100'],
-            'work_experience_years' => ['nullable', 'string', 'max:100'],
-            'previous_company' => ['nullable', 'string', 'max:255'],
-            'previous_designation' => ['nullable', 'string', 'max:255'],
-            'previous_job_details' => ['nullable', 'string', 'max:2000'],
-        ]);
+            'phone' => [
+                'nullable',
+                'string',
+                'max:30',
+            ],
 
+            'address' => [
+                'nullable',
+                'string',
+                'max:500',
+            ],
+
+            'profile_image' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048',
+            ],
+        ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Student Specific Fields
+        |--------------------------------------------------------------------------
+        */
+        if ($user->isStudent()) {
+            $rules = array_merge($rules, [
+                'department' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'batch' => [
+                    'nullable',
+                    'string',
+                    'max:100',
+                ],
+
+                'skills' => [
+                    'nullable',
+                    'string',
+                    'max:1000',
+                ],
+
+                'bio' => [
+                    'nullable',
+                    'string',
+                    'max:2000',
+                ],
+
+                'github_url' => [
+                    'nullable',
+                    'url',
+                    'max:255',
+                ],
+
+                'linkedin_url' => [
+                    'nullable',
+                    'url',
+                    'max:255',
+                ],
+
+                'portfolio_url' => [
+                    'nullable',
+                    'url',
+                    'max:255',
+                ],
+            ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Alumni Specific Fields
+        |--------------------------------------------------------------------------
+        */
+        if ($user->isAlumni()) {
+            $rules = array_merge($rules, [
+                'department' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                ],
+
+                'batch' => [
+                    'nullable',
+                    'string',
+                    'max:100',
+                ],
+
+                'skills' => [
+                    'nullable',
+                    'string',
+                    'max:1000',
+                ],
+
+                'bio' => [
+                    'nullable',
+                    'string',
+                    'max:2000',
+                ],
+
+                'github_url' => [
+                    'nullable',
+                    'url',
+                    'max:255',
+                ],
+
+                'linkedin_url' => [
+                    'nullable',
+                    'url',
+                    'max:255',
+                ],
+
+                'portfolio_url' => [
+                    'nullable',
+                    'url',
+                    'max:255',
+                ],
+            ]);
+        }
+
+        $validated = $request->validate($rules);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Profile Image
+        |--------------------------------------------------------------------------
+        */
         unset($validated['profile_image']);
 
         if ($request->hasFile('profile_image')) {
-            if ($user->profile_image && Storage::disk('public')->exists($user->profile_image)) {
-                Storage::disk('public')->delete($user->profile_image);
+            if (
+                $user->profile_image
+                && Storage::disk('public')->exists($user->profile_image)
+            ) {
+                Storage::disk('public')->delete(
+                    $user->profile_image
+                );
             }
 
-            $validated['profile_image'] = $request->file('profile_image')
-                ->store('profile-images', 'public');
+            $validated['profile_image'] = $request
+                ->file('profile_image')
+                ->store(
+                    'profile-images',
+                    'public'
+                );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Save User Profile
+        |--------------------------------------------------------------------------
+        */
         $user->fill($validated);
         $user->save();
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        return Redirect::route('profile.edit')
+            ->with(
+                'status',
+                'profile-updated'
+            );
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Delete Account
+    |--------------------------------------------------------------------------
+    */
     public function destroy(Request $request): RedirectResponse
     {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
-        ]);
+        $request->validateWithBag(
+            'userDeletion',
+            [
+                'password' => [
+                    'required',
+                    'current_password',
+                ],
+            ]
+        );
 
         $user = $request->user();
 
-        if ($user->profile_image && Storage::disk('public')->exists($user->profile_image)) {
-            Storage::disk('public')->delete($user->profile_image);
+        if (
+            $user->profile_image
+            && Storage::disk('public')->exists($user->profile_image)
+        ) {
+            Storage::disk('public')->delete(
+                $user->profile_image
+            );
         }
 
         auth()->guard()->logout();
@@ -93,101 +313,257 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Role Based Profile Score
+    |--------------------------------------------------------------------------
+    */
     private function calculateProfileScore($user): int
     {
+        /*
+        |--------------------------------------------------------------------------
+        | Student
+        |--------------------------------------------------------------------------
+        */
+        if ($user->isStudent()) {
+            $fields = [
+                'name',
+                'email',
+                'phone',
+                'department',
+                'batch',
+                'skills',
+                'bio',
+                'address',
+                'profile_image',
+                'github_url',
+                'linkedin_url',
+                'portfolio_url',
+            ];
+
+            return $this->calculateFieldCompletion(
+                $user,
+                $fields
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Alumni
+        |--------------------------------------------------------------------------
+        */
+        if ($user->isAlumni()) {
+            $fields = [
+                'name',
+                'email',
+                'phone',
+                'department',
+                'batch',
+                'skills',
+                'bio',
+                'address',
+                'profile_image',
+                'github_url',
+                'linkedin_url',
+                'portfolio_url',
+            ];
+
+            $completed = 0;
+
+            foreach ($fields as $field) {
+                if (!empty($user->{$field})) {
+                    $completed++;
+                }
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | Work Experience counts as an important profile item
+            |--------------------------------------------------------------------------
+            */
+            $hasExperience = $user
+                ->workExperiences()
+                ->exists();
+
+            if ($hasExperience) {
+                $completed++;
+            }
+
+            $totalFields = count($fields) + 1;
+
+            return (int) round(
+                ($completed / $totalFields) * 100
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin / Super Admin
+        |--------------------------------------------------------------------------
+        */
         $fields = [
             'name',
             'email',
             'phone',
-            'department',
-            'batch',
-            'skills',
-            'bio',
             'address',
             'profile_image',
-            'github_url',
-            'linkedin_url',
-            'portfolio_url',
-            'current_company',
-            'current_designation',
-            'work_experience_years',
-            'previous_company',
-            'previous_job_details',
         ];
 
+        return $this->calculateFieldCompletion(
+            $user,
+            $fields
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Generic Field Completion Calculator
+    |--------------------------------------------------------------------------
+    */
+    private function calculateFieldCompletion(
+        $user,
+        array $fields
+    ): int {
         $completed = 0;
 
         foreach ($fields as $field) {
-            if (!empty($user->$field)) {
+            if (!empty($user->{$field})) {
                 $completed++;
             }
         }
 
-        return (int) round(($completed / count($fields)) * 100);
+        if (count($fields) === 0) {
+            return 0;
+        }
+
+        return (int) round(
+            ($completed / count($fields)) * 100
+        );
     }
 
-    private function generateProfileSuggestions($user, int $profileScore): array
-    {
+    /*
+    |--------------------------------------------------------------------------
+    | Role Based Suggestions
+    |--------------------------------------------------------------------------
+    */
+    private function generateProfileSuggestions(
+        $user,
+        int $profileScore
+    ): array {
         $suggestions = [];
 
+        /*
+        |--------------------------------------------------------------------------
+        | Common
+        |--------------------------------------------------------------------------
+        */
         if ($profileScore < 60) {
-            $suggestions[] = 'Complete your profile information to improve visibility.';
+            $suggestions[] =
+                'Complete your profile information to improve visibility.';
         }
 
         if (empty($user->profile_image)) {
-            $suggestions[] = 'Upload a professional profile photo.';
+            $suggestions[] =
+                'Upload a professional profile photo.';
         }
 
         if (empty($user->phone)) {
-            $suggestions[] = 'Add your phone number for better communication.';
+            $suggestions[] =
+                'Add your phone number for better communication.';
         }
 
-        if (empty($user->department)) {
-            $suggestions[] = 'Add your department information.';
+        /*
+        |--------------------------------------------------------------------------
+        | Student Suggestions
+        |--------------------------------------------------------------------------
+        */
+        if ($user->isStudent()) {
+            if (empty($user->department)) {
+                $suggestions[] =
+                    'Add your department information.';
+            }
+
+            if (empty($user->batch)) {
+                $suggestions[] =
+                    'Add your academic batch.';
+            }
+
+            if (empty($user->skills)) {
+                $suggestions[] =
+                    'Add your technical and professional skills.';
+            }
+
+            if (empty($user->bio)) {
+                $suggestions[] =
+                    'Write your career goal and academic interests.';
+            }
+
+            if (empty($user->github_url)) {
+                $suggestions[] =
+                    'Add your GitHub profile to showcase projects and code.';
+            }
+
+            if (empty($user->linkedin_url)) {
+                $suggestions[] =
+                    'Add your LinkedIn profile for professional networking.';
+            }
+
+            if (empty($user->portfolio_url)) {
+                $suggestions[] =
+                    'Add your portfolio or personal website.';
+            }
         }
 
-        if (empty($user->batch)) {
-            $suggestions[] = 'Add your batch or passing year.';
+        /*
+        |--------------------------------------------------------------------------
+        | Alumni Suggestions
+        |--------------------------------------------------------------------------
+        */
+        if ($user->isAlumni()) {
+            if (empty($user->department)) {
+                $suggestions[] =
+                    'Add your university department.';
+            }
+
+            if (empty($user->batch)) {
+                $suggestions[] =
+                    'Add your batch or passing year.';
+            }
+
+            if (empty($user->skills)) {
+                $suggestions[] =
+                    'Add your professional skills and expertise.';
+            }
+
+            if (empty($user->bio)) {
+                $suggestions[] =
+                    'Write a professional bio about your experience and expertise.';
+            }
+
+            if (empty($user->linkedin_url)) {
+                $suggestions[] =
+                    'Add your LinkedIn profile for professional networking.';
+            }
+
+            if (
+                !$user
+                    ->workExperiences()
+                    ->exists()
+            ) {
+                $suggestions[] =
+                    'Add at least one work experience to strengthen your alumni profile.';
+            }
         }
 
-        if (empty($user->skills)) {
-            $suggestions[] = 'Add your skills like Laravel, PHP, JavaScript, Python, React, Communication.';
-        }
-
-        if (empty($user->github_url)) {
-            $suggestions[] = 'Add your GitHub profile to showcase projects and code.';
-        }
-
-        if (empty($user->linkedin_url)) {
-            $suggestions[] = 'Add your LinkedIn profile for professional networking.';
-        }
-
-        if (empty($user->portfolio_url)) {
-            $suggestions[] = 'Add your portfolio or website link to improve your professional profile.';
-        }
-
-        if (empty($user->bio)) {
-            $suggestions[] = 'Write a short bio about your academic or professional goal.';
-        }
-
+        /*
+        |--------------------------------------------------------------------------
+        | Completed Profile
+        |--------------------------------------------------------------------------
+        */
         if (empty($suggestions)) {
-            $suggestions[] = 'Your profile looks strong. Keep it updated regularly.';
+            $suggestions[] =
+                'Your profile looks strong. Keep it updated regularly.';
         }
-        if (empty($user->current_company)) {
-    $suggestions[] = 'Add your current company or workplace.';
-}
-
-if (empty($user->current_designation)) {
-    $suggestions[] = 'Add your current designation or job role.';
-}
-
-if (empty($user->work_experience_years)) {
-    $suggestions[] = 'Add your total work experience.';
-}
-
-if (empty($user->previous_job_details)) {
-    $suggestions[] = 'Add previous job or experience details.';
-}
 
         return $suggestions;
     }

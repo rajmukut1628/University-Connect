@@ -14,15 +14,23 @@ class VerifiedUser extends Model
         'alumni_id',
         'name',
         'email',
+        'phone',
         'department',
         'batch',
         'role',
         'status',
+        'notes',
+        'created_by',
     ];
 
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    public function isInactive(): bool
+    {
+        return $this->status === 'inactive';
     }
 
     public function isStudent(): bool
@@ -33,5 +41,10 @@ class VerifiedUser extends Model
     public function isAlumni(): bool
     {
         return $this->role === 'alumni';
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

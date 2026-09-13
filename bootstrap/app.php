@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\OwnerMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,7 +15,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
+
+            // Existing Role Middleware
             'role' => CheckRole::class,
+
+            // Owner Super Admin Middleware
+            'owner' => OwnerMiddleware::class,
+
         ]);
     })
 

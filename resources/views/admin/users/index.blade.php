@@ -1,266 +1,834 @@
 <x-app-layout>
+
     <x-slot name="header">
+
         <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950 to-cyan-950 p-8 shadow-2xl border border-white/10">
+
             <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,.30),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,.25),transparent_35%)]"></div>
 
+
             <div class="relative z-10">
+
                 <p class="text-sm uppercase tracking-[0.35em] text-cyan-300 font-black">
-                    {{ auth()->user()->role === 'super_admin' ? 'Super Admin Control Center' : 'Admin Control Center' }}
+
+                    {{ auth()->user()->role === 'super_admin'
+                        ? 'Super Admin Control Center'
+                        : 'Admin Control Center' }}
+
                 </p>
+
 
                 <h2 class="mt-3 text-4xl lg:text-5xl font-black text-white">
+
                     User Management
+
                 </h2>
 
+
                 <p class="mt-3 text-slate-300 max-w-2xl">
-                    Search, monitor, block, unblock and manage all student, alumni and admin accounts.
-                    Super Admin accounts are protected.
+
+                    Search, edit, monitor, block, unblock and manage platform accounts.
+
                 </p>
+
             </div>
+
         </div>
+
     </x-slot>
 
-    @php
-        $isSuperAdmin = auth()->user()->role === 'super_admin';
 
-        $indexRoute = $isSuperAdmin ? route('superadmin.users.index') : route('admin.users.index');
-        $dashboardRoute = $isSuperAdmin ? route('superadmin.dashboard') : route('admin.dashboard');
+    @php
+
+        $isSuperAdmin =
+            auth()->user()->role === 'super_admin';
+
+
+        $indexRoute = $isSuperAdmin
+            ? route('superadmin.users.index')
+            : route('admin.users.index');
+
+
+        $dashboardRoute = $isSuperAdmin
+            ? route('superadmin.dashboard')
+            : route('admin.dashboard');
+
     @endphp
+
 
     <div class="space-y-8">
 
+
+        {{-- ========================================================= --}}
+        {{-- SUCCESS --}}
+        {{-- ========================================================= --}}
+
         @if(session('success'))
+
             <div class="rounded-2xl bg-emerald-500/15 border border-emerald-500/30 p-4 text-emerald-600 font-bold">
+
+                <i class="fas fa-circle-check mr-2"></i>
+
                 {{ session('success') }}
+
             </div>
+
         @endif
+
+
+        {{-- ========================================================= --}}
+        {{-- ERROR --}}
+        {{-- ========================================================= --}}
 
         @if(session('error'))
+
             <div class="rounded-2xl bg-red-500/15 border border-red-500/30 p-4 text-red-600 font-bold">
+
+                <i class="fas fa-circle-exclamation mr-2"></i>
+
                 {{ session('error') }}
+
             </div>
+
         @endif
+
 
         @if($errors->any())
+
             <div class="rounded-2xl bg-red-500/15 border border-red-500/30 p-4 text-red-600 font-bold">
+
+                <i class="fas fa-circle-exclamation mr-2"></i>
+
                 {{ $errors->first() }}
+
             </div>
+
         @endif
 
-        {{-- Stats --}}
+
+        {{-- ========================================================= --}}
+        {{-- STATS --}}
+        {{-- ========================================================= --}}
+
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-5">
+
+
             @foreach([
-                ['label' => 'Total Users', 'value' => $stats['total'] ?? 0, 'icon' => 'fa-users', 'color' => 'from-cyan-500 to-blue-600'],
-                ['label' => 'Students', 'value' => $stats['students'] ?? 0, 'icon' => 'fa-user-graduate', 'color' => 'from-emerald-500 to-green-600'],
-                ['label' => 'Alumni', 'value' => $stats['alumni'] ?? 0, 'icon' => 'fa-award', 'color' => 'from-amber-500 to-orange-600'],
-                ['label' => 'Admins', 'value' => $stats['admins'] ?? 0, 'icon' => 'fa-user-shield', 'color' => 'from-purple-500 to-fuchsia-600'],
-                ['label' => 'Blocked', 'value' => $stats['blocked'] ?? 0, 'icon' => 'fa-ban', 'color' => 'from-red-500 to-pink-600'],
-                ['label' => 'Inactive', 'value' => $stats['inactive'] ?? 0, 'icon' => 'fa-user-clock', 'color' => 'from-slate-500 to-slate-700'],
+
+                [
+                    'label' => 'Total Users',
+                    'value' => $stats['total'] ?? 0,
+                    'icon' => 'fa-users',
+                    'color' => 'from-cyan-500 to-blue-600'
+                ],
+
+                [
+                    'label' => 'Students',
+                    'value' => $stats['students'] ?? 0,
+                    'icon' => 'fa-user-graduate',
+                    'color' => 'from-emerald-500 to-green-600'
+                ],
+
+                [
+                    'label' => 'Alumni',
+                    'value' => $stats['alumni'] ?? 0,
+                    'icon' => 'fa-award',
+                    'color' => 'from-amber-500 to-orange-600'
+                ],
+
+                [
+                    'label' => 'Admins',
+                    'value' => $stats['admins'] ?? 0,
+                    'icon' => 'fa-user-shield',
+                    'color' => 'from-purple-500 to-fuchsia-600'
+                ],
+
+                [
+                    'label' => 'Blocked',
+                    'value' => $stats['blocked'] ?? 0,
+                    'icon' => 'fa-ban',
+                    'color' => 'from-red-500 to-pink-600'
+                ],
+
+                [
+                    'label' => 'Inactive',
+                    'value' => $stats['inactive'] ?? 0,
+                    'icon' => 'fa-user-clock',
+                    'color' => 'from-slate-500 to-slate-700'
+                ],
+
             ] as $item)
+
+
                 <div class="group rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-5 shadow-2xl hover:-translate-y-2 transition duration-300">
+
                     <div class="flex items-center justify-between">
+
                         <div>
-                            <p class="text-sm text-slate-500 font-bold">{{ $item['label'] }}</p>
-                            <p class="mt-2 text-4xl font-black text-slate-900 dark:text-white">
-                                {{ $item['value'] }}
+
+                            <p class="text-sm text-slate-500 font-bold">
+
+                                {{ $item['label'] }}
+
                             </p>
+
+
+                            <p class="mt-2 text-4xl font-black text-slate-900 dark:text-white">
+
+                                {{ $item['value'] }}
+
+                            </p>
+
                         </div>
+
 
                         <div class="h-14 w-14 rounded-2xl bg-gradient-to-br {{ $item['color'] }} flex items-center justify-center text-white shadow-xl group-hover:scale-110 transition">
+
                             <i class="fas {{ $item['icon'] }}"></i>
+
                         </div>
+
                     </div>
+
                 </div>
+
+
             @endforeach
+
+
         </div>
 
-        {{-- Search Filter --}}
+
+        {{-- ========================================================= --}}
+        {{-- FILTER --}}
+        {{-- ========================================================= --}}
+
         <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-6 shadow-2xl">
-            <form method="GET" action="{{ $indexRoute }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <input type="text"
-                       name="search"
-                       value="{{ $search ?? '' }}"
-                       placeholder="Search name, email, phone, department..."
-                       class="rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
 
-                <select name="role"
-                        class="rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
-                    <option value="">All Roles</option>
-                    <option value="student" @selected(($role ?? '') === 'student')>Student</option>
-                    <option value="alumni" @selected(($role ?? '') === 'alumni')>Alumni</option>
-                    <option value="admin" @selected(($role ?? '') === 'admin')>Admin</option>
-                    <option value="super_admin" @selected(($role ?? '') === 'super_admin')>Super Admin</option>
+
+            <form
+                method="GET"
+                action="{{ $indexRoute }}"
+                class="grid grid-cols-1 md:grid-cols-4 gap-4"
+            >
+
+
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ $search ?? '' }}"
+                    placeholder="Search name, email, ID, phone, department..."
+                    class="rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                >
+
+
+                <select
+                    name="role"
+                    class="rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                >
+
+                    <option value="">
+                        All Roles
+                    </option>
+
+                    <option
+                        value="student"
+                        @selected(($role ?? '') === 'student')
+                    >
+                        Student
+                    </option>
+
+                    <option
+                        value="alumni"
+                        @selected(($role ?? '') === 'alumni')
+                    >
+                        Alumni
+                    </option>
+
+                    <option
+                        value="admin"
+                        @selected(($role ?? '') === 'admin')
+                    >
+                        Admin
+                    </option>
+
+                    <option
+                        value="super_admin"
+                        @selected(($role ?? '') === 'super_admin')
+                    >
+                        Super Admin
+                    </option>
+
                 </select>
 
-                <select name="status"
-                        class="rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white">
-                    <option value="">All Status</option>
-                    <option value="active" @selected(($status ?? '') === 'active')>Active</option>
-                    <option value="blocked" @selected(($status ?? '') === 'blocked')>Blocked</option>
-                    <option value="inactive" @selected(($status ?? '') === 'inactive')>Inactive</option>
+
+                <select
+                    name="status"
+                    class="rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                >
+
+                    <option value="">
+                        All Status
+                    </option>
+
+                    <option
+                        value="active"
+                        @selected(($status ?? '') === 'active')
+                    >
+                        Active
+                    </option>
+
+                    <option
+                        value="blocked"
+                        @selected(($status ?? '') === 'blocked')
+                    >
+                        Blocked
+                    </option>
+
+                    <option
+                        value="inactive"
+                        @selected(($status ?? '') === 'inactive')
+                    >
+                        Inactive
+                    </option>
+
                 </select>
 
-                <button type="submit"
-                        class="rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black shadow-xl hover:scale-105 transition">
+
+                <button
+                    type="submit"
+                    class="rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-3 text-white font-black shadow-xl hover:scale-105 transition"
+                >
+
                     <i class="fas fa-search mr-2"></i>
+
                     Filter
+
                 </button>
+
+
             </form>
+
         </div>
 
-        {{-- Users Table --}}
+
+        {{-- ========================================================= --}}
+        {{-- USERS TABLE --}}
+        {{-- ========================================================= --}}
+
         <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden">
+
+
             <div class="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+
+
                 <div>
+
                     <p class="text-sm uppercase tracking-[0.25em] text-indigo-500 font-black">
+
                         User Database
+
                     </p>
+
+
                     <h3 class="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+
                         All Accounts
+
                     </h3>
+
                 </div>
 
-                <a href="{{ $dashboardRoute }}"
-                   class="hidden md:inline-flex px-5 py-3 rounded-2xl bg-slate-950 text-white font-black hover:scale-105 transition">
+
+                <a
+                    href="{{ $dashboardRoute }}"
+                    class="hidden md:inline-flex px-5 py-3 rounded-2xl bg-slate-950 text-white font-black hover:scale-105 transition"
+                >
+
                     Dashboard
+
                 </a>
+
+
             </div>
+
 
             <div class="overflow-x-auto">
+
+
                 <table class="w-full">
+
+
                     <thead class="bg-slate-100 dark:bg-slate-950">
+
                         <tr>
-                            <th class="px-6 py-4 text-left text-xs uppercase tracking-widest text-slate-500">User</th>
-                            <th class="px-6 py-4 text-left text-xs uppercase tracking-widest text-slate-500">Role</th>
-                            <th class="px-6 py-4 text-left text-xs uppercase tracking-widest text-slate-500">Status</th>
-                            <th class="px-6 py-4 text-left text-xs uppercase tracking-widest text-slate-500">Info</th>
-                            <th class="px-6 py-4 text-right text-xs uppercase tracking-widest text-slate-500">Action</th>
+
+                            <th class="px-6 py-4 text-left text-xs uppercase tracking-widest text-slate-500">
+                                User
+                            </th>
+
+                            <th class="px-6 py-4 text-left text-xs uppercase tracking-widest text-slate-500">
+                                Role
+                            </th>
+
+                            <th class="px-6 py-4 text-left text-xs uppercase tracking-widest text-slate-500">
+                                Status
+                            </th>
+
+                            <th class="px-6 py-4 text-left text-xs uppercase tracking-widest text-slate-500">
+                                Info
+                            </th>
+
+                            <th class="px-6 py-4 text-right text-xs uppercase tracking-widest text-slate-500">
+                                Action
+                            </th>
+
                         </tr>
+
                     </thead>
 
+
                     <tbody class="divide-y divide-slate-200 dark:divide-white/10">
+
+
                         @forelse($users as $userItem)
+
+
+                            @php
+
+                                if ($isSuperAdmin) {
+
+                                    /*
+                                    | Super Admin:
+                                    | Student      -> manage
+                                    | Alumni       -> manage
+                                    | Admin        -> manage
+                                    | Super Admin  -> protected
+                                    */
+
+                                    $canManage =
+                                        $userItem->role !== 'super_admin';
+
+                                } else {
+
+                                    /*
+                                    | General Admin:
+                                    | Student      -> manage
+                                    | Alumni       -> manage
+                                    | Admin        -> protected
+                                    | Super Admin  -> protected
+                                    */
+
+                                    $canManage = in_array(
+                                        $userItem->role,
+                                        [
+                                            'student',
+                                            'alumni',
+                                        ],
+                                        true
+                                    );
+
+                                }
+
+                            @endphp
+
+
                             <tr class="hover:bg-slate-50 dark:hover:bg-white/5 transition">
+
+
+                                {{-- USER --}}
+
                                 <td class="px-6 py-5">
+
                                     <div class="flex items-center gap-4">
+
+
                                         @if(!empty($userItem->profile_image))
-                                            <img src="{{ asset('storage/' . $userItem->profile_image) }}"
-                                                 class="h-12 w-12 rounded-2xl object-cover">
+
+                                            <img
+                                                src="{{ $userItem->getProfileImageUrl() }}"
+                                                alt="{{ $userItem->name }}"
+                                                class="h-12 w-12 rounded-2xl object-cover"
+                                            >
+
                                         @else
+
                                             <div class="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black">
+
                                                 {{ strtoupper(substr($userItem->name, 0, 1)) }}
+
                                             </div>
+
                                         @endif
+
 
                                         <div>
+
                                             <p class="font-black text-slate-900 dark:text-white">
+
                                                 {{ $userItem->name }}
+
                                             </p>
+
+
                                             <p class="text-sm text-slate-500">
+
                                                 {{ $userItem->email }}
+
                                             </p>
-                                        </div>
-                                    </div>
-                                </td>
 
-                                <td class="px-6 py-5">
-                                    <span class="px-4 py-2 rounded-full text-xs font-black
-                                        @if($userItem->role === 'super_admin') bg-amber-500/10 text-amber-500
-                                        @elseif($userItem->role === 'admin') bg-purple-500/10 text-purple-600
-                                        @elseif($userItem->role === 'student') bg-cyan-500/10 text-cyan-600
-                                        @else bg-indigo-500/10 text-indigo-600 @endif">
-                                        @if($userItem->role === 'super_admin')
-                                            <i class="fas fa-crown mr-1"></i>
-                                        @endif
-                                        {{ ucwords(str_replace('_', ' ', $userItem->role)) }}
-                                    </span>
-                                </td>
 
-                                <td class="px-6 py-5">
-                                    @if($userItem->is_blocked)
-                                        <span class="px-4 py-2 rounded-full text-xs font-black bg-red-500/10 text-red-600">
-                                            Blocked
-                                        </span>
-                                    @elseif(!$userItem->is_active)
-                                        <span class="px-4 py-2 rounded-full text-xs font-black bg-amber-500/10 text-amber-600">
-                                            Inactive
-                                        </span>
-                                    @else
-                                        <span class="px-4 py-2 rounded-full text-xs font-black bg-emerald-500/10 text-emerald-600">
-                                            Active
-                                        </span>
-                                    @endif
-                                </td>
+                                            @if($userItem->official_id)
 
-                                <td class="px-6 py-5 text-sm text-slate-500">
-                                    <p>{{ $userItem->phone ?? 'No phone' }}</p>
-                                    <p>{{ $userItem->department ?? $userItem->address ?? 'No extra info' }}</p>
-                                </td>
+                                                <p class="mt-1 text-xs text-slate-400">
 
-                                <td class="px-6 py-5">
-                                    <div class="flex items-center justify-end gap-2">
+                                                    ID:
+                                                    {{ $userItem->official_id }}
 
-                                        @if($userItem->role === 'super_admin')
-                                            <span class="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500/10 text-amber-500 text-sm font-black border border-amber-500/20">
-                                                <i class="fas fa-crown mr-2"></i>
-                                                Protected
-                                            </span>
-                                        @else
-                                            @if(!$userItem->is_blocked)
-                                                <form method="POST"
-                                                      action="{{ $isSuperAdmin ? route('superadmin.users.block', $userItem) : route('admin.users.block', $userItem) }}">
-                                                    @csrf
-                                                    @method('PATCH')
+                                                </p>
 
-                                                    <button type="submit"
-                                                            onclick="return confirm('Block this user?')"
-                                                            class="px-4 py-2 rounded-xl bg-red-500/10 text-red-600 font-black hover:bg-red-500 hover:text-white transition">
-                                                        Block
-                                                    </button>
-                                                </form>
-                                            @else
-                                                <form method="POST"
-                                                      action="{{ $isSuperAdmin ? route('superadmin.users.unblock', $userItem) : route('admin.users.unblock', $userItem) }}">
-                                                    @csrf
-                                                    @method('PATCH')
-
-                                                    <button type="submit"
-                                                            class="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 font-black hover:bg-emerald-500 hover:text-white transition">
-                                                        Unblock
-                                                    </button>
-                                                </form>
                                             @endif
 
-                                            <form method="POST"
-                                                  action="{{ $isSuperAdmin ? route('superadmin.users.destroy', $userItem) : route('admin.users.destroy', $userItem) }}">
-                                                @csrf
-                                                @method('DELETE')
+                                        </div>
 
-                                                <button type="submit"
-                                                        onclick="return confirm('Delete this user permanently?')"
-                                                        class="px-4 py-2 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 font-black hover:bg-slate-950 hover:text-white transition">
-                                                    Delete
-                                                </button>
-                                            </form>
-                                        @endif
 
                                     </div>
+
                                 </td>
+
+
+                                {{-- ROLE --}}
+
+                                <td class="px-6 py-5">
+
+
+                                    <span
+                                        class="px-4 py-2 rounded-full text-xs font-black
+
+                                        @if($userItem->role === 'super_admin')
+                                            bg-amber-500/10 text-amber-500
+
+                                        @elseif($userItem->role === 'admin')
+                                            bg-purple-500/10 text-purple-600
+
+                                        @elseif($userItem->role === 'student')
+                                            bg-cyan-500/10 text-cyan-600
+
+                                        @else
+                                            bg-indigo-500/10 text-indigo-600
+                                        @endif"
+                                    >
+
+
+                                        @if($userItem->role === 'super_admin')
+
+                                            <i class="fas fa-crown mr-1"></i>
+
+                                        @elseif($userItem->role === 'admin')
+
+                                            <i class="fas fa-user-shield mr-1"></i>
+
+                                        @endif
+
+
+                                        {{ ucwords(
+                                            str_replace(
+                                                '_',
+                                                ' ',
+                                                $userItem->role
+                                            )
+                                        ) }}
+
+
+                                    </span>
+
+
+                                </td>
+
+
+                                {{-- STATUS --}}
+
+                                <td class="px-6 py-5">
+
+
+                                    @if($userItem->is_blocked)
+
+                                        <span class="px-4 py-2 rounded-full text-xs font-black bg-red-500/10 text-red-600">
+
+                                            Blocked
+
+                                        </span>
+
+
+                                    @elseif(!$userItem->is_active)
+
+                                        <span class="px-4 py-2 rounded-full text-xs font-black bg-amber-500/10 text-amber-600">
+
+                                            Inactive
+
+                                        </span>
+
+
+                                    @else
+
+                                        <span class="px-4 py-2 rounded-full text-xs font-black bg-emerald-500/10 text-emerald-600">
+
+                                            Active
+
+                                        </span>
+
+                                    @endif
+
+
+                                </td>
+
+
+                                {{-- INFO --}}
+
+                                <td class="px-6 py-5 text-sm text-slate-500">
+
+                                    <p>
+
+                                        {{ $userItem->phone ?? 'No phone' }}
+
+                                    </p>
+
+
+                                    <p>
+
+                                        {{ $userItem->department
+                                            ?? $userItem->address
+                                            ?? 'No extra info' }}
+
+                                    </p>
+
+                                </td>
+
+
+                                {{-- ACTION --}}
+
+                                <td class="px-6 py-5">
+
+
+                                    <div class="flex items-center justify-end gap-2 flex-wrap">
+
+
+                                        @if($canManage)
+
+
+                                            {{-- EDIT --}}
+
+                                            <a
+                                                href="{{ $isSuperAdmin
+                                                    ? route(
+                                                        'superadmin.users.edit',
+                                                        $userItem
+                                                    )
+                                                    : route(
+                                                        'admin.users.edit',
+                                                        $userItem
+                                                    ) }}"
+                                                class="px-4 py-2 rounded-xl bg-indigo-500/10 text-indigo-500 font-black hover:bg-indigo-500 hover:text-white transition"
+                                            >
+
+                                                <i class="fas fa-pen-to-square mr-1"></i>
+
+                                                Edit
+
+                                            </a>
+
+
+                                            {{-- BLOCK / UNBLOCK --}}
+
+                                            @if(!$userItem->is_blocked)
+
+
+                                                <form
+                                                    method="POST"
+                                                    action="{{ $isSuperAdmin
+                                                        ? route(
+                                                            'superadmin.users.block',
+                                                            $userItem
+                                                        )
+                                                        : route(
+                                                            'admin.users.block',
+                                                            $userItem
+                                                        ) }}"
+                                                >
+
+                                                    @csrf
+
+                                                    @method('PATCH')
+
+
+                                                    <button
+                                                        type="submit"
+                                                        onclick="return confirm('Block this user?')"
+                                                        class="px-4 py-2 rounded-xl bg-red-500/10 text-red-600 font-black hover:bg-red-500 hover:text-white transition"
+                                                    >
+
+                                                        <i class="fas fa-ban mr-1"></i>
+
+                                                        Block
+
+                                                    </button>
+
+                                                </form>
+
+
+                                            @else
+
+
+                                                <form
+                                                    method="POST"
+                                                    action="{{ $isSuperAdmin
+                                                        ? route(
+                                                            'superadmin.users.unblock',
+                                                            $userItem
+                                                        )
+                                                        : route(
+                                                            'admin.users.unblock',
+                                                            $userItem
+                                                        ) }}"
+                                                >
+
+                                                    @csrf
+
+                                                    @method('PATCH')
+
+
+                                                    <button
+                                                        type="submit"
+                                                        class="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 font-black hover:bg-emerald-500 hover:text-white transition"
+                                                    >
+
+                                                        <i class="fas fa-unlock mr-1"></i>
+
+                                                        Unblock
+
+                                                    </button>
+
+                                                </form>
+
+
+                                            @endif
+
+
+                                            {{-- DELETE --}}
+
+                                            <form
+                                                method="POST"
+                                                action="{{ $isSuperAdmin
+                                                    ? route(
+                                                        'superadmin.users.destroy',
+                                                        $userItem
+                                                    )
+                                                    : route(
+                                                        'admin.users.destroy',
+                                                        $userItem
+                                                    ) }}"
+                                            >
+
+                                                @csrf
+
+                                                @method('DELETE')
+
+
+                                                <button
+                                                    type="submit"
+                                                    onclick="return confirm('Delete this user permanently?')"
+                                                    class="px-4 py-2 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 font-black hover:bg-slate-950 hover:text-white transition"
+                                                >
+
+                                                    <i class="fas fa-trash mr-1"></i>
+
+                                                    Delete
+
+                                                </button>
+
+                                            </form>
+
+
+                                        @else
+
+
+                                            {{-- PROTECTED --}}
+
+                                            <span class="inline-flex items-center px-4 py-2 rounded-xl bg-amber-500/10 text-amber-500 text-sm font-black border border-amber-500/20">
+
+
+                                                @if($userItem->role === 'super_admin')
+
+                                                    <i class="fas fa-crown mr-2"></i>
+
+                                                    Protected Super Admin
+
+
+                                                @elseif($userItem->role === 'admin')
+
+                                                    <i class="fas fa-shield-halved mr-2"></i>
+
+                                                    Protected Admin
+
+                                                @endif
+
+
+                                            </span>
+
+
+                                        @endif
+
+
+                                    </div>
+
+
+                                </td>
+
+
                             </tr>
+
+
                         @empty
+
+
                             <tr>
-                                <td colspan="5" class="px-6 py-12 text-center text-slate-500 font-bold">
+
+                                <td
+                                    colspan="5"
+                                    class="px-6 py-12 text-center text-slate-500 font-bold"
+                                >
+
                                     No users found.
+
                                 </td>
+
                             </tr>
+
+
                         @endforelse
+
+
                     </tbody>
+
+
                 </table>
+
+
             </div>
 
+
+            {{-- PAGINATION --}}
+
             <div class="p-6">
+
                 {{ $users->links() }}
+
             </div>
+
+
         </div>
+
+
     </div>
+
 </x-app-layout>
