@@ -460,7 +460,7 @@
                 </a>
 
 
-                <a href="{{ route('mentors.requests') }}"
+                <a href="{{ route('mentors.index') }}"
                    class="quick-action
                           rounded-2xl
                           border border-amber-500/20
@@ -1051,7 +1051,7 @@
                         </div>
 
 
-                        <a href="{{ route('mentors.requests') }}"
+                        <a href="{{ route('mentors.index') }}"
                            class="px-4 py-2
                                   rounded-xl
                                   bg-amber-500/15

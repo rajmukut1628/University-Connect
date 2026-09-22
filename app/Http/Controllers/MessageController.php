@@ -627,10 +627,7 @@ class MessageController extends Controller
                     'recipient_id' =>
                         $user->id,
 
-                    'content' =>
-                        $body !== ''
-                            ? $body
-                            : null,
+                   'content' => $body,
 
                     'attachment' =>
                         $attachmentPath,
