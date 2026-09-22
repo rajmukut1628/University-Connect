@@ -640,30 +640,44 @@ Route::middleware(['role:admin'])
         )->name('verified-users.destroy');
 
     });
-    /*
-    |--------------------------------------------------------------------------
-    | Student Routes
-    |--------------------------------------------------------------------------
-    */
+     /*
+|--------------------------------------------------------------------------
+| Student Routes
+|--------------------------------------------------------------------------
+|
+| Student Dashboard + Student AI Assistant
+|
+*/
 
-    Route::middleware(['role:student'])
-        ->prefix('student')
-        ->name('student.')
-        ->group(function () {
+Route::middleware(['role:student'])
+    ->prefix('student')
+    ->name('student.')
+    ->group(function () {
 
-            Route::get(
-                '/dashboard',
-                [StudentDashboardController::class, 'index']
-            )->name('dashboard');
+        /*
+        |--------------------------------------------------------------------------
+        | Student Dashboard
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/dashboard',
+            [StudentDashboardController::class, 'index']
+        )->name('dashboard');
 
 
-            Route::post(
-                '/ai-study-assistant',
-                [AIController::class, 'ask']
-            )->name('ai.study.assistant');
+        /*
+        |--------------------------------------------------------------------------
+        | Student AI Assistant
+        |--------------------------------------------------------------------------
+        */
 
-        });
+        Route::post(
+            '/ai-assistant',
+            [StudentDashboardController::class, 'aiStudyAssistant']
+        )->name('ai-assistant');
 
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -886,7 +900,34 @@ Route::middleware(['role:admin'])
         '/donations/{donation}/manual-payment',
         [DonationManualPaymentController::class, 'store']
     )->name('donations.manual-payment');
+/*
+|--------------------------------------------------------------------------
+| Donation Payment Verification
+|--------------------------------------------------------------------------
+*/
 
+Route::middleware([
+    'role:admin,super_admin',
+])->group(function () {
+
+    Route::get(
+        '/admin/donation-payments/pending',
+        [DonationManualPaymentController::class, 'pending']
+    )->name('donation-payments.pending');
+
+
+    Route::patch(
+        '/admin/donation-payments/{payment}/approve',
+        [DonationManualPaymentController::class, 'approve']
+    )->name('donation-payments.approve');
+
+
+    Route::patch(
+        '/admin/donation-payments/{payment}/reject',
+        [DonationManualPaymentController::class, 'reject']
+    )->name('donation-payments.reject');
+
+});
 
     /*
     |--------------------------------------------------------------------------

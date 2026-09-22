@@ -6,11 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Mentorship;
 use App\Models\Message;
 use App\Models\Notification;
-use App\Models\User;
 use App\Services\AISuggestionService;
+use App\Services\ProfileStrengthService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use App\Services\ProfileStrengthService;
 
 class DashboardController extends Controller
 {
@@ -18,93 +17,202 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        $jobOwnerColumn = $this->getJobOwnerColumn();
+        /*
+        |--------------------------------------------------------------------------
+        | Alumni Job Statistics
+        |--------------------------------------------------------------------------
+        */
+
+        $myJobsCount = 0;
+        $approvedJobsCount = 0;
+        $pendingJobsCount = 0;
+        $rejectedJobsCount = 0;
+        $myJobs = collect();
+
+        if (
+            Schema::hasTable('job_postings') &&
+            Schema::hasColumn('job_postings', 'posted_by')
+        ) {
+            $jobQuery = DB::table('job_postings')
+                ->where('posted_by', $user->id);
+
+            $myJobsCount = (clone $jobQuery)->count();
+
+            if (Schema::hasColumn('job_postings', 'status')) {
+                $approvedJobsCount = (clone $jobQuery)
+                    ->where('status', 'approved')
+                    ->count();
+
+                $pendingJobsCount = (clone $jobQuery)
+                    ->where('status', 'pending')
+                    ->count();
+
+                $rejectedJobsCount = (clone $jobQuery)
+                    ->where('status', 'rejected')
+                    ->count();
+            }
+
+            $orderColumn = Schema::hasColumn(
+                'job_postings',
+                'created_at'
+            )
+                ? 'created_at'
+                : 'id';
+
+            $myJobs = (clone $jobQuery)
+                ->orderByDesc($orderColumn)
+                ->take(5)
+                ->get();
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Mentorship Statistics
+        |--------------------------------------------------------------------------
+        */
+
+        $mentorshipRequestsCount = 0;
+        $pendingMentorshipsCount = 0;
+        $acceptedMentorshipsCount = 0;
+        $mentorshipRequests = collect();
+
+        if (
+            Schema::hasTable('mentorships') &&
+            Schema::hasColumn('mentorships', 'mentor_id')
+        ) {
+            $mentorshipQuery = Mentorship::where(
+                'mentor_id',
+                $user->id
+            );
+
+            $mentorshipRequestsCount =
+                (clone $mentorshipQuery)->count();
+
+            if (Schema::hasColumn('mentorships', 'status')) {
+                $pendingMentorshipsCount =
+                    (clone $mentorshipQuery)
+                        ->where('status', 'pending')
+                        ->count();
+
+                $acceptedMentorshipsCount =
+                    (clone $mentorshipQuery)
+                        ->where('status', 'accepted')
+                        ->count();
+            }
+
+            /*
+            |--------------------------------------------------------------
+            | We do not assume a student() relationship exists.
+            | Student names are loaded safely using the users table.
+            |--------------------------------------------------------------
+            */
+
+            $mentorshipRequests = DB::table('mentorships')
+                ->leftJoin(
+                    'users',
+                    'mentorships.student_id',
+                    '=',
+                    'users.id'
+                )
+                ->where(
+                    'mentorships.mentor_id',
+                    $user->id
+                )
+                ->select(
+                    'mentorships.*',
+                    'users.name as student_name',
+                    'users.department as student_department',
+                    'users.batch as student_batch'
+                )
+                ->orderByDesc('mentorships.created_at')
+                ->take(5)
+                ->get();
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Dashboard Statistics
+        |--------------------------------------------------------------------------
+        */
 
         $stats = [
-            'my_jobs' => $jobOwnerColumn
-                ? DB::table('jobs')->where($jobOwnerColumn, $user->id)->count()
-                : 0,
+            'my_jobs' => $myJobsCount,
 
-            'approved_jobs' => $jobOwnerColumn && Schema::hasColumn('jobs', 'status')
-                ? DB::table('jobs')
-                    ->where($jobOwnerColumn, $user->id)
-                    ->whereIn('status', ['approved', 'active', 'published'])
-                    ->count()
-                : 0,
+            'approved_jobs' => $approvedJobsCount,
 
-            'pending_jobs' => $jobOwnerColumn && Schema::hasColumn('jobs', 'status')
-                ? DB::table('jobs')
-                    ->where($jobOwnerColumn, $user->id)
-                    ->where('status', 'pending')
-                    ->count()
-                : 0,
+            'pending_jobs' => $pendingJobsCount,
 
-            'mentorship_requests' => Schema::hasTable('mentorships') && Schema::hasColumn('mentorships', 'mentor_id')
-                ? Mentorship::where('mentor_id', $user->id)->count()
-                : 0,
+            'rejected_jobs' => $rejectedJobsCount,
 
-            'unread_messages' => $this->getUnreadMessages($user->id),
+            'mentorship_requests' => $mentorshipRequestsCount,
 
-            'unread_notifications' => $this->getUnreadNotifications($user->id),
+            'pending_mentorships' => $pendingMentorshipsCount,
+
+            'accepted_mentorships' => $acceptedMentorshipsCount,
+
+            'unread_messages' => $this->getUnreadMessages(
+                $user->id
+            ),
+
+            'unread_notifications' => $this->getUnreadNotifications(
+                $user->id
+            ),
         ];
 
-        $myJobs = $jobOwnerColumn
-            ? DB::table('jobs')
-                ->where($jobOwnerColumn, $user->id)
-                ->orderByDesc(Schema::hasColumn('jobs', 'created_at') ? 'created_at' : 'id')
-                ->take(5)
-                ->get()
-            : collect();
 
-        $mentorshipRequests = Schema::hasTable('mentorships') && Schema::hasColumn('mentorships', 'mentor_id')
-            ? Mentorship::where('mentor_id', $user->id)
-                ->latest()
-                ->take(5)
-                ->get()
-            : collect();
+        /*
+        |--------------------------------------------------------------------------
+        | Profile Strength
+        |--------------------------------------------------------------------------
+        */
 
-        $recommendedStudents = Schema::hasTable('users')
-            ? User::where('role', 'student')
-                ->latest()
-                ->take(6)
-                ->get()
-            : collect();
+        $profileStrength = app(
+            ProfileStrengthService::class
+        )->analyze($user);
 
-        $contributionScore = $this->calculateContributionScore($stats);
+        $profileScore =
+            (int) ($profileStrength['score'] ?? 0);
 
-        // Real Dynamic AI Suggestions
-        $aiSuggestions = app(AISuggestionService::class)->latestFor($user, 6);
 
-        $profileStrength = app(ProfileStrengthService::class)->analyze($user);
-        $profileScore = $profileStrength['score'];
+        /*
+        |--------------------------------------------------------------------------
+        | Dynamic AI Suggestions
+        |--------------------------------------------------------------------------
+        */
 
-        return view('alumni.dashboard', compact(
-            'user',
-            'stats',
-            'myJobs',
-            'mentorshipRequests',
-            'recommendedStudents',
-            'contributionScore',
-            'aiSuggestions',
-            'profileStrength',
-            'profileScore'
-        ));
+        $aiSuggestions = app(
+            AISuggestionService::class
+        )->latestFor($user, 4);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | View
+        |--------------------------------------------------------------------------
+        */
+
+        return view(
+            'alumni.dashboard',
+            compact(
+                'user',
+                'stats',
+                'myJobs',
+                'mentorshipRequests',
+                'profileStrength',
+                'profileScore',
+                'aiSuggestions'
+            )
+        );
     }
 
-    private function getJobOwnerColumn(): ?string
-    {
-        if (!Schema::hasTable('jobs')) {
-            return null;
-        }
 
-        foreach (['user_id', 'alumni_id', 'created_by', 'posted_by'] as $column) {
-            if (Schema::hasColumn('jobs', $column)) {
-                return $column;
-            }
-        }
-
-        return null;
-    }
+    /*
+    |--------------------------------------------------------------------------
+    | Unread Messages
+    |--------------------------------------------------------------------------
+    */
 
     private function getUnreadMessages(int $userId): int
     {
@@ -113,19 +221,33 @@ class DashboardController extends Controller
         }
 
         if (Schema::hasColumn('messages', 'recipient_id')) {
-            return Message::where('recipient_id', $userId)
+            return Message::where(
+                'recipient_id',
+                $userId
+            )
                 ->when(
-                    Schema::hasColumn('messages', 'read_at'),
-                    fn ($q) => $q->whereNull('read_at')
+                    Schema::hasColumn(
+                        'messages',
+                        'read_at'
+                    ),
+                    fn ($query) =>
+                        $query->whereNull('read_at')
                 )
                 ->count();
         }
 
         if (Schema::hasColumn('messages', 'to_user_id')) {
-            return Message::where('to_user_id', $userId)
+            return Message::where(
+                'to_user_id',
+                $userId
+            )
                 ->when(
-                    Schema::hasColumn('messages', 'read_at'),
-                    fn ($q) => $q->whereNull('read_at')
+                    Schema::hasColumn(
+                        'messages',
+                        'read_at'
+                    ),
+                    fn ($query) =>
+                        $query->whereNull('read_at')
                 )
                 ->count();
         }
@@ -133,33 +255,39 @@ class DashboardController extends Controller
         return 0;
     }
 
-    private function getUnreadNotifications(int $userId): int
-    {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Unread Notifications
+    |--------------------------------------------------------------------------
+    */
+
+    private function getUnreadNotifications(
+        int $userId
+    ): int {
         if (!Schema::hasTable('notifications')) {
             return 0;
         }
 
-        if (Schema::hasColumn('notifications', 'user_id')) {
-            return Notification::where('user_id', $userId)
-                ->when(
-                    Schema::hasColumn('notifications', 'read_at'),
-                    fn ($q) => $q->whereNull('read_at')
-                )
-                ->count();
+        if (!Schema::hasColumn(
+            'notifications',
+            'user_id'
+        )) {
+            return 0;
         }
 
-        return 0;
-    }
-
-    private function calculateContributionScore(array $stats): int
-    {
-        $score = 20;
-
-        $score += min(($stats['my_jobs'] ?? 0) * 10, 30);
-        $score += min(($stats['approved_jobs'] ?? 0) * 10, 25);
-        $score += min(($stats['mentorship_requests'] ?? 0) * 5, 15);
-        $score += min(($stats['unread_messages'] ?? 0) * 2, 10);
-
-        return min($score, 100);
+        return Notification::where(
+            'user_id',
+            $userId
+        )
+            ->when(
+                Schema::hasColumn(
+                    'notifications',
+                    'read_at'
+                ),
+                fn ($query) =>
+                    $query->whereNull('read_at')
+            )
+            ->count();
     }
 }

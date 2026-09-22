@@ -19,6 +19,12 @@ class MessageController extends Controller
     {
         $authUser = auth()->user();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Messaging Access
+        |--------------------------------------------------------------------------
+        */
+
         abort_unless(
             in_array(
                 $authUser->role,
@@ -31,26 +37,12 @@ class MessageController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Users available for chat
-        |--------------------------------------------------------------------------
-        */
-
-        $users = User::query()
-            ->whereIn(
-                'role',
-                ['student', 'alumni']
-            )
-            ->where('id', '!=', $authUser->id)
-            ->where('is_active', true)
-            ->where('is_blocked', false)
-            ->orderBy('name')
-            ->get();
-
-
-        /*
-        |--------------------------------------------------------------------------
         | Conversation Partner IDs
         |--------------------------------------------------------------------------
+        |
+        | Find everyone with whom the current user already has a visible
+        | conversation.
+        |
         */
 
         $partnerIds = Message::query()
@@ -66,19 +58,29 @@ class MessageController extends Controller
             })
             ->get()
             ->map(function ($message) use ($authUser) {
-                return (int) $message->sender_id ===
-                    (int) $authUser->id
-                    ? $message->recipient_id
-                    : $message->sender_id;
+                return (int) $message->sender_id === (int) $authUser->id
+                    ? (int) $message->recipient_id
+                    : (int) $message->sender_id;
             })
             ->unique()
             ->values();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Recent Conversations
+        |--------------------------------------------------------------------------
+        */
 
         $conversations = User::query()
             ->whereIn('id', $partnerIds)
             ->get()
             ->map(function ($user) use ($authUser) {
+
+                /*
+                |--------------------------------------------------------------
+                | Last visible message
+                |--------------------------------------------------------------
+                */
 
                 $lastMessage = Message::query()
                     ->where(function ($query) use ($authUser, $user) {
@@ -96,6 +98,12 @@ class MessageController extends Controller
                     ->latest()
                     ->first();
 
+                /*
+                |--------------------------------------------------------------
+                | Unread messages
+                |--------------------------------------------------------------
+                */
+
                 $unreadCount = Message::query()
                     ->where('sender_id', $user->id)
                     ->where('recipient_id', $authUser->id)
@@ -108,6 +116,9 @@ class MessageController extends Controller
 
                 return $user;
             })
+            ->filter(function ($user) {
+                return $user->last_message !== null;
+            })
             ->sortByDesc(function ($user) {
                 return optional(
                     $user->last_message
@@ -115,16 +126,149 @@ class MessageController extends Controller
             })
             ->values();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Users Available For New Chat
+        |--------------------------------------------------------------------------
+        |
+        | IMPORTANT:
+        |
+        | We intentionally DO NOT limit the database query to 5 users.
+        |
+        | The full eligible list is sent to the Blade page so that Search
+        | can search everyone.
+        |
+        | JavaScript will display only 5 suggestions initially.
+        |
+        */
+
+        $users = User::query()
+            ->whereIn(
+                'role',
+                ['student', 'alumni']
+            )
+            ->where(
+                'id',
+                '!=',
+                $authUser->id
+            )
+            ->where(
+                'is_active',
+                true
+            )
+            ->where(
+                'is_blocked',
+                false
+            )
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Role-Based Priority
+        |--------------------------------------------------------------------------
+        |
+        | Student:
+        | Alumni first, then Students.
+        |
+        | Alumni:
+        | Students first, then Alumni.
+        |
+        | This makes the New Chat suggestions more useful for mentorship
+        | and student/alumni communication.
+        |
+        */
+
+        $preferredRole = $authUser->role === 'student'
+            ? 'alumni'
+            : 'student';
+
+        /*
+        |--------------------------------------------------------------------------
+        | Smart New Chat Sorting
+        |--------------------------------------------------------------------------
+        |
+        | Priority:
+        |
+        | 1. Users without an existing conversation
+        | 2. Preferred opposite role
+        | 3. Alphabetical name
+        |
+        | Existing conversation users are still searchable and still available.
+        |
+        */
+
+        $users = $users
+            ->sort(function ($a, $b) use (
+                $partnerIds,
+                $preferredRole
+            ) {
+
+                $aHasConversation = $partnerIds->contains(
+                    (int) $a->id
+                );
+
+                $bHasConversation = $partnerIds->contains(
+                    (int) $b->id
+                );
+
+                /*
+                |--------------------------------------------------------------------------
+                | New people first
+                |--------------------------------------------------------------------------
+                */
+
+                if ($aHasConversation !== $bHasConversation) {
+                    return $aHasConversation <=> $bHasConversation;
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Preferred role first
+                |--------------------------------------------------------------------------
+                */
+
+                $aPreferred =
+                    $a->role === $preferredRole
+                        ? 0
+                        : 1;
+
+                $bPreferred =
+                    $b->role === $preferredRole
+                        ? 0
+                        : 1;
+
+                if ($aPreferred !== $bPreferred) {
+                    return $aPreferred <=> $bPreferred;
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Alphabetical fallback
+                |--------------------------------------------------------------------------
+                */
+
+                return strcasecmp(
+                    (string) $a->name,
+                    (string) $b->name
+                );
+            })
+            ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | View
+        |--------------------------------------------------------------------------
+        */
 
         return view(
             'messages.index',
             compact(
                 'users',
-                'conversations'
+                'conversations',
+                'preferredRole'
             )
         );
     }
-
 
     /**
      * Open conversation.
@@ -132,6 +276,12 @@ class MessageController extends Controller
     public function show(User $user)
     {
         $authUser = auth()->user();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Access
+        |--------------------------------------------------------------------------
+        */
 
         abort_unless(
             in_array(
@@ -142,6 +292,12 @@ class MessageController extends Controller
             403
         );
 
+        /*
+        |--------------------------------------------------------------------------
+        | Cannot Message Yourself
+        |--------------------------------------------------------------------------
+        */
+
         if (
             (int) $authUser->id ===
             (int) $user->id
@@ -151,6 +307,12 @@ class MessageController extends Controller
                 'You cannot message yourself.'
             );
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Only Student / Alumni
+        |--------------------------------------------------------------------------
+        */
 
         if (
             !in_array(
@@ -165,6 +327,12 @@ class MessageController extends Controller
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Availability
+        |--------------------------------------------------------------------------
+        */
+
         if (
             !$user->is_active ||
             $user->is_blocked
@@ -175,29 +343,33 @@ class MessageController extends Controller
             );
         }
 
-
         /*
         |--------------------------------------------------------------------------
-        | Mark received messages as read
+        | Mark Received Messages As Read
         |--------------------------------------------------------------------------
         */
 
         Message::query()
-            ->where('sender_id', $user->id)
+            ->where(
+                'sender_id',
+                $user->id
+            )
             ->where(
                 'recipient_id',
                 $authUser->id
             )
-            ->where('is_read', false)
+            ->where(
+                'is_read',
+                false
+            )
             ->update([
                 'is_read' => true,
                 'read_at' => now(),
             ]);
 
-
         /*
         |--------------------------------------------------------------------------
-        | Mark related message notifications read
+        | Mark Related Notifications Read
         |--------------------------------------------------------------------------
         */
 
@@ -223,10 +395,9 @@ class MessageController extends Controller
                 'read_at' => now(),
             ]);
 
-
         /*
         |--------------------------------------------------------------------------
-        | Conversation
+        | Conversation Messages
         |--------------------------------------------------------------------------
         */
 
@@ -270,6 +441,11 @@ class MessageController extends Controller
             ->orderBy('created_at')
             ->get();
 
+        /*
+        |--------------------------------------------------------------------------
+        | View
+        |--------------------------------------------------------------------------
+        */
 
         return view(
             'messages.show',
@@ -280,7 +456,6 @@ class MessageController extends Controller
         );
     }
 
-
     /**
      * Send message.
      */
@@ -289,6 +464,12 @@ class MessageController extends Controller
         User $user
     ) {
         $authUser = auth()->user();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Access
+        |--------------------------------------------------------------------------
+        */
 
         abort_unless(
             in_array(
@@ -299,6 +480,12 @@ class MessageController extends Controller
             403
         );
 
+        /*
+        |--------------------------------------------------------------------------
+        | Cannot Message Yourself
+        |--------------------------------------------------------------------------
+        */
+
         if (
             (int) $authUser->id ===
             (int) $user->id
@@ -308,6 +495,12 @@ class MessageController extends Controller
                 'You cannot message yourself.'
             );
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Only Student / Alumni
+        |--------------------------------------------------------------------------
+        */
 
         if (
             !in_array(
@@ -322,6 +515,12 @@ class MessageController extends Controller
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | User Availability
+        |--------------------------------------------------------------------------
+        */
+
         if (
             !$user->is_active ||
             $user->is_blocked
@@ -332,6 +531,11 @@ class MessageController extends Controller
             ]);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Validation
+        |--------------------------------------------------------------------------
+        */
 
         $validated = $request->validate([
             'body' => [
@@ -348,13 +552,17 @@ class MessageController extends Controller
             ],
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Message Body
+        |--------------------------------------------------------------------------
+        */
 
         $body = trim(
             (string) (
                 $validated['body'] ?? ''
             )
         );
-
 
         if (
             $body === '' &&
@@ -368,11 +576,15 @@ class MessageController extends Controller
                 ]);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Attachment
+        |--------------------------------------------------------------------------
+        */
 
         $attachmentPath = null;
         $attachmentName = null;
         $attachmentType = null;
-
 
         if ($request->hasFile('attachment')) {
 
@@ -392,6 +604,11 @@ class MessageController extends Controller
                 $file->getClientMimeType();
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Save Message
+        |--------------------------------------------------------------------------
+        */
 
         $message = DB::transaction(
             function () use (
@@ -402,6 +619,7 @@ class MessageController extends Controller
                 $attachmentName,
                 $attachmentType
             ) {
+
                 return Message::create([
                     'sender_id' =>
                         $authUser->id,
@@ -423,11 +641,14 @@ class MessageController extends Controller
                     'attachment_type' =>
                         $attachmentType,
 
-                    'is_read' => false,
+                    'is_read' =>
+                        false,
 
-                    'read_at' => null,
+                    'read_at' =>
+                        null,
 
-                    'is_edited' => false,
+                    'is_edited' =>
+                        false,
 
                     'deleted_by_sender' =>
                         false,
@@ -438,17 +659,16 @@ class MessageController extends Controller
             }
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | Notification -> Receiver
         |--------------------------------------------------------------------------
         */
 
-        $preview = $body !== ''
-            ? str($body)->limit(80)
-            : 'Sent you an attachment.';
-
+        $preview =
+            $body !== ''
+                ? str($body)->limit(80)
+                : 'Sent you an attachment.';
 
         NotificationService::send(
             $user,
@@ -466,10 +686,8 @@ class MessageController extends Controller
             $authUser
         );
 
-
         return back();
     }
-
 
     /**
      * Edit own message.
@@ -479,6 +697,12 @@ class MessageController extends Controller
         Message $message
     ) {
         $authUser = auth()->user();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ownership
+        |--------------------------------------------------------------------------
+        */
 
         if (
             (int) $message->sender_id !==
@@ -490,7 +714,6 @@ class MessageController extends Controller
             );
         }
 
-
         if ($message->deleted_by_sender) {
             abort(
                 404,
@@ -498,6 +721,11 @@ class MessageController extends Controller
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Validation
+        |--------------------------------------------------------------------------
+        */
 
         $validated = $request->validate([
             'body' => [
@@ -507,6 +735,11 @@ class MessageController extends Controller
             ],
         ]);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Update
+        |--------------------------------------------------------------------------
+        */
 
         $message->update([
             'content' =>
@@ -514,16 +747,15 @@ class MessageController extends Controller
                     $validated['body']
                 ),
 
-            'is_edited' => true,
+            'is_edited' =>
+                true,
         ]);
-
 
         return back()->with(
             'success',
             'Message updated.'
         );
     }
-
 
     /**
      * Delete message for current user.
@@ -533,6 +765,11 @@ class MessageController extends Controller
     ) {
         $authUser = auth()->user();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Soft Delete For Current User
+        |--------------------------------------------------------------------------
+        */
 
         if (
             (int) $message->sender_id ===
@@ -562,13 +799,11 @@ class MessageController extends Controller
             );
         }
 
-
         $message->refresh();
-
 
         /*
         |--------------------------------------------------------------------------
-        | Permanently delete when both sides removed it
+        | Permanently Delete When Both Sides Removed It
         |--------------------------------------------------------------------------
         */
 
@@ -590,7 +825,6 @@ class MessageController extends Controller
 
             $message->delete();
         }
-
 
         return back()->with(
             'success',

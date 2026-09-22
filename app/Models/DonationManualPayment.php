@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class DonationManualPayment extends Model
 {
@@ -16,20 +16,19 @@ class DonationManualPayment extends Model
         'account_number',
         'transaction_id',
         'amount',
-        'screenshot',
         'note',
+        'screenshot',
         'status',
+
+        'reviewed_by',
+        'reviewed_at',
+        'rejection_reason',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'reviewed_at' => 'datetime',
     ];
-
-    /*
-    |--------------------------------------------------------------------------
-    | Relationships
-    |--------------------------------------------------------------------------
-    */
 
     public function donation()
     {
@@ -41,31 +40,11 @@ class DonationManualPayment extends Model
         return $this->belongsTo(User::class);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Helper Methods
-    |--------------------------------------------------------------------------
-    */
-
-    public function isPending(): bool
+    public function reviewer()
     {
-        return $this->status === 'pending';
-    }
-
-    public function isApproved(): bool
-    {
-        return $this->status === 'approved';
-    }
-
-    public function isRejected(): bool
-    {
-        return $this->status === 'rejected';
-    }
-
-    public function getScreenshotUrlAttribute(): ?string
-    {
-        return $this->screenshot
-            ? asset('storage/' . $this->screenshot)
-            : null;
+        return $this->belongsTo(
+            User::class,
+            'reviewed_by'
+        );
     }
 }
