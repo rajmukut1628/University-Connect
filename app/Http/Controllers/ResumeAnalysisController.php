@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EncryptedFileService;
 use App\Models\Job;
 use App\Models\ResumeAnalysis;
 use Illuminate\Http\Request;
@@ -34,7 +35,12 @@ class ResumeAnalysisController extends Controller
         ]);
 
         $file = $request->file('resume_file');
-        $path = $file->store('resume-analyses', 'public');
+        $path =
+         app(EncryptedFileService::class)
+         ->store(
+            $file,
+            'resume-analyses'
+        );
 
         $analysis = $this->generateAnalysis(
             $file->getClientOriginalName(),
@@ -67,8 +73,12 @@ class ResumeAnalysisController extends Controller
             abort(403);
         }
 
-        if ($resumeAnalysis->file_path && Storage::disk('public')->exists($resumeAnalysis->file_path)) {
-            Storage::disk('public')->delete($resumeAnalysis->file_path);
+        if ($resumeAnalysis->file_path) {
+         app(
+           EncryptedFileService::class
+          )->delete(
+           $resumeAnalysis->file_path
+         );
         }
 
         $resumeAnalysis->delete();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EncryptedFileService;
 use App\Models\Message;
 use App\Models\Notification;
 use App\Models\User;
@@ -592,10 +593,11 @@ class MessageController extends Controller
                 $request->file('attachment');
 
             $attachmentPath =
-                $file->store(
-                    'messages/attachments',
-                    'public'
-                );
+          app(EncryptedFileService::class)
+         ->store(
+            $file,
+            'message-attachments'
+        );
 
             $attachmentName =
                 $file->getClientOriginalName();

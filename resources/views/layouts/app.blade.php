@@ -1016,14 +1016,8 @@
 
     $avatarUrl = null;
 
-    if ($user && $user->profile_image) {
-
-        $avatarUrl = Str::startsWith(
-            $user->profile_image,
-            ['http://', 'https://']
-        )
-            ? $user->profile_image
-            : asset('storage/' . $user->profile_image);
+    if ($user) {
+        $avatarUrl = $user->getProfileImageUrl();
     }
 
     /*
@@ -1610,7 +1604,7 @@
                         </h1>
 
                         <p class="uc-brand-subtitle">
-                            AI Campus Ecosystem
+                            Campus Ecosystem
                         </p>
 
                     </div>
@@ -2392,7 +2386,7 @@
                                 font-bold
                             "
                         >
-                            AI Campus Ecosystem
+                            Campus Ecosystem
                         </p>
 
                     </div>

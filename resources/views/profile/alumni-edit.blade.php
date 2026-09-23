@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-purple-950 to-indigo-950 p-8 shadow-2xl border border-white/10">
+        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-purple-950 to-indigo-950 p-6 lg:p-7 shadow-xl border border-white/10">
             <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,.30),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,.25),transparent_35%)]"></div>
 
             <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -9,7 +9,7 @@
                         Alumni Professional Profile
                     </p>
 
-                    <h2 class="mt-3 text-4xl lg:text-5xl font-black text-white">
+                    <h2 class="mt-3 text-3xl lg:text-4xl font-black text-white">
                         {{ $user->name }}
                     </h2>
 
@@ -19,12 +19,12 @@
                     </p>
                 </div>
 
-                <div class="rounded-3xl bg-white/10 backdrop-blur-xl border border-white/10 px-7 py-5 text-center">
+                <div class="rounded-3xl bg-white/10 backdrop-blur-xl border border-white/10 px-6 py-4 text-center">
                     <p class="text-xs text-slate-300">
                         Profile Completion
                     </p>
 
-                    <p class="mt-1 text-4xl font-black text-emerald-300">
+                    <p class="mt-1 text-3xl font-black text-emerald-300">
                         {{ $profileScore ?? 0 }}%
                     </p>
 
@@ -36,7 +36,7 @@
         </div>
     </x-slot>
 
-    <div class="max-w-7xl mx-auto space-y-8">
+    <div class="max-w-7xl mx-auto space-y-6">
 
         {{-- Status --}}
         @if(session('status') === 'profile-updated')
@@ -77,10 +77,10 @@
             </div>
         @endif
 
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
 
             {{-- Left --}}
-            <div class="space-y-8">
+            <div class="xl:col-span-4 space-y-5 xl:sticky xl:top-6">
 
                 {{-- Profile Card --}}
                 <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-7 shadow-2xl">
@@ -190,30 +190,40 @@
             </div>
 
             {{-- Main --}}
-            <div class="xl:col-span-2 space-y-8">
+            <div class="xl:col-span-8 space-y-6">
+
+                <div class="rounded-2xl bg-white/80 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 p-3 shadow-lg backdrop-blur">
+                    <div class="flex flex-wrap gap-2 text-sm font-bold">
+                        <a href="#alumni-basic" class="px-4 py-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-300">Basic</a>
+                        <a href="#alumni-academic" class="px-4 py-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">Academic</a>
+                        <a href="#alumni-professional" class="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">Professional</a>
+                        <a href="#alumni-links" class="px-4 py-2 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-300">Links</a>
+                        <a href="#alumni-experience" class="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-300">Experience</a>
+                    </div>
+                </div>
 
                 {{-- Main Alumni Profile Form --}}
                 <form
                     method="POST"
                     action="{{ route('profile.update') }}"
                     enctype="multipart/form-data"
-                    class="space-y-8"
+                    class="space-y-6"
                 >
                     @csrf
                     @method('PATCH')
 
                     {{-- Personal --}}
-                    <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-8 shadow-2xl">
+                    <div id="alumni-basic" class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-6 lg:p-7 shadow-xl">
 
                         <p class="text-sm uppercase tracking-[0.25em] text-purple-500 font-black">
                             Personal Information
                         </p>
 
-                        <h3 class="mt-2 text-3xl font-black text-slate-900 dark:text-white">
+                        <h3 class="mt-2 text-2xl font-black text-slate-900 dark:text-white">
                             Basic Details
                         </h3>
 
-                        <div class="mt-7 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
 
                             <div>
                                 <label class="font-bold text-slate-700 dark:text-slate-300">
@@ -290,17 +300,17 @@
                     </div>
 
                     {{-- Academic --}}
-                    <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-8 shadow-2xl">
+                    <div id="alumni-academic" class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-6 lg:p-7 shadow-xl">
 
                         <p class="text-sm uppercase tracking-[0.25em] text-indigo-500 font-black">
                             University Background
                         </p>
 
-                        <h3 class="mt-2 text-3xl font-black text-slate-900 dark:text-white">
+                        <h3 class="mt-2 text-2xl font-black text-slate-900 dark:text-white">
                             Academic Information
                         </h3>
 
-                        <div class="mt-7 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
 
                             <div>
                                 <label class="font-bold text-slate-700 dark:text-slate-300">
@@ -333,17 +343,17 @@
                     </div>
 
                     {{-- Professional Summary --}}
-                    <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-8 shadow-2xl">
+                    <div id="alumni-professional" class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-6 lg:p-7 shadow-xl">
 
                         <p class="text-sm uppercase tracking-[0.25em] text-emerald-500 font-black">
                             Professional Profile
                         </p>
 
-                        <h3 class="mt-2 text-3xl font-black text-slate-900 dark:text-white">
+                        <h3 class="mt-2 text-2xl font-black text-slate-900 dark:text-white">
                             Expertise & Professional Bio
                         </h3>
 
-                        <div class="mt-7 space-y-6">
+                        <div class="mt-5 space-y-5">
 
                             <div>
                                 <label class="font-bold text-slate-700 dark:text-slate-300">
@@ -379,17 +389,17 @@
                     </div>
 
                     {{-- Professional Links --}}
-                    <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-8 shadow-2xl">
+                    <div id="alumni-links" class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-6 lg:p-7 shadow-xl">
 
                         <p class="text-sm uppercase tracking-[0.25em] text-cyan-500 font-black">
                             Professional Presence
                         </p>
 
-                        <h3 class="mt-2 text-3xl font-black text-slate-900 dark:text-white">
+                        <h3 class="mt-2 text-2xl font-black text-slate-900 dark:text-white">
                             Social & Portfolio Links
                         </h3>
 
-                        <div class="mt-7 space-y-6">
+                        <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
 
                             <div>
                                 <label class="font-bold text-slate-700 dark:text-slate-300">
@@ -453,7 +463,7 @@
                 </form>
 
                 {{-- Work Experience Heading --}}
-                <div class="rounded-3xl bg-gradient-to-br from-slate-950 via-purple-950 to-indigo-950 border border-white/10 p-8 shadow-2xl text-white">
+                <div id="alumni-experience" class="rounded-3xl bg-gradient-to-br from-slate-950 via-purple-950 to-indigo-950 border border-white/10 p-6 lg:p-7 shadow-xl text-white">
 
                     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
 
@@ -494,7 +504,7 @@
                     >
 
                         {{-- View --}}
-                        <div class="p-8">
+                        <div class="p-6 lg:p-7">
 
                             <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
 
@@ -591,7 +601,7 @@
                         <div
                             x-show="editing"
                             x-cloak
-                            class="border-t border-slate-200 dark:border-white/10 p-8 bg-slate-50 dark:bg-slate-950/60"
+                            class="border-t border-slate-200 dark:border-white/10 p-6 lg:p-7 bg-slate-50 dark:bg-slate-950/60"
                         >
 
                             <form
@@ -794,25 +804,38 @@
                 {{-- Add New Experience --}}
                 <div
                     x-data="{
-                        current: {{ old('is_current') ? 'true' : 'false' }}
+                        current: {{ old('is_current') ? 'true' : 'false' }},
+                        open: {{ ($errors->has('company_name') || $errors->has('designation') || $errors->has('start_date') || old('company_name')) ? 'true' : 'false' }}
                     }"
-                    class="rounded-3xl bg-white dark:bg-slate-900 border border-purple-500/20 p-8 shadow-2xl"
+                    class="rounded-3xl bg-white dark:bg-slate-900 border border-purple-500/20 p-6 lg:p-7 shadow-xl"
                 >
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <p class="text-sm uppercase tracking-[0.25em] text-purple-500 font-black">
+                                Add Experience
+                            </p>
 
-                    <p class="text-sm uppercase tracking-[0.25em] text-purple-500 font-black">
-                        Add Experience
-                    </p>
+                            <h3 class="mt-2 text-2xl font-black text-slate-900 dark:text-white">
+                                Add a New Position
+                            </h3>
 
-                    <h3 class="mt-2 text-3xl font-black text-slate-900 dark:text-white">
-                        Add a New Position
-                    </h3>
+                            <p class="mt-2 text-sm text-slate-500">
+                                Add a current role, previous job, internship or freelance experience.
+                            </p>
+                        </div>
 
-                    <p class="mt-2 text-slate-500">
-                        Add current employment, previous job, internship,
-                        freelance work or another professional role.
-                    </p>
+                        <button
+                            type="button"
+                            @click="open = !open"
+                            class="shrink-0 px-5 py-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-300 font-black"
+                        >
+                            <span x-text="open ? 'Hide Form' : '+ Add Position'"></span>
+                        </button>
+                    </div>
 
                     <form
+                        x-show="open"
+                        x-cloak
                         method="POST"
                         action="{{ route('profile.work-experiences.store') }}"
                         class="mt-8 space-y-6"

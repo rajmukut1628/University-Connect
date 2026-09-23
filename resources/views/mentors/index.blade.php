@@ -107,6 +107,59 @@
             color: #ffffff;
         }
 
+        /* Mentor card polish */
+        .mentor-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mentor-card .mentor-card-body {
+            position: relative;
+            z-index: 10;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mentor-avatar {
+            transition: transform .25s ease, box-shadow .25s ease;
+        }
+
+        .mentor-card:hover .mentor-avatar {
+            transform: scale(1.035);
+        }
+
+        .mentor-actions {
+            margin-top: auto;
+        }
+
+        .mentor-message {
+            min-height: 88px;
+            resize: vertical;
+        }
+
+        .mentor-profile-button {
+            background: rgba(14, 165, 233, .12);
+            border: 1px solid rgba(56, 189, 248, .28);
+            color: #38bdf8;
+        }
+
+        .mentor-profile-button:hover {
+            background: rgba(14, 165, 233, .20);
+            border-color: rgba(56, 189, 248, .45);
+        }
+
+        .dark .mentor-profile-button {
+            color: #7dd3fc;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .uc-float {
+                animation: none;
+            }
+        }
+
     </style>
 
 
@@ -287,7 +340,7 @@
                         </select>
 
 
-                        <i class="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+
 
                     </div>
 
@@ -334,7 +387,7 @@
         {{-- MENTOR LIST --}}
         {{-- ========================================================= --}}
 
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 xl:gap-6 items-stretch">
 
 
             @forelse($mentors as $mentor)
@@ -362,9 +415,9 @@
                 @endphp
 
 
-                <div class="uc-card p-6">
+                <div class="uc-card mentor-card p-6">
 
-                    <div class="relative z-10">
+                    <div class="mentor-card-body">
 
 
                         {{-- MENTOR INFO --}}
@@ -379,7 +432,7 @@
 
                                     <img
                                         src="{{ $mentor->getProfileImageUrl() }}"
-                                        class="h-20 w-20 shrink-0 rounded-3xl object-cover bg-white shadow-xl uc-float"
+                                        class="mentor-avatar h-20 w-20 shrink-0 rounded-3xl object-cover bg-white shadow-lg ring-1 ring-white/30"
                                         alt="{{ $mentor->name }}"
                                     >
 
@@ -387,7 +440,7 @@
 
                                     <img
                                         src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ urlencode($mentor->email) }}"
-                                        class="h-20 w-20 shrink-0 rounded-3xl bg-white shadow-xl uc-float"
+                                        class="mentor-avatar h-20 w-20 shrink-0 rounded-3xl bg-white shadow-lg ring-1 ring-white/30"
                                         alt="{{ $mentor->name }}"
                                     >
 
@@ -396,21 +449,21 @@
 
                                 <div class="min-w-0">
 
-                                    <h3 class="text-xl font-black text-slate-900 dark:text-white break-words">
+                                    <h3 class="text-lg leading-tight font-black text-slate-900 dark:text-white break-words">
 
                                         {{ $mentor->name }}
 
                                     </h3>
 
 
-                                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                    <p class="mt-1.5 text-sm font-semibold text-slate-500 dark:text-slate-400">
 
                                         {{ $mentor->current_designation ?: 'Verified Alumni Mentor' }}
 
                                     </p>
 
 
-                                    <p class="mt-1 text-sm font-bold text-purple-500">
+                                    <p class="mt-1 text-sm font-bold text-purple-500/90">
 
                                         {{ $mentor->current_company ?: 'University Alumni' }}
 
@@ -421,7 +474,7 @@
                             </div>
 
 
-                            <span class="shrink-0 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 text-xs font-black">
+                            <span class="shrink-0 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[11px] font-black">
 
                                 <i class="fas fa-circle-check mr-1"></i>
 
@@ -436,7 +489,7 @@
 
                         @if($mentor->department)
 
-                            <div class="mt-5">
+                            <div class="mt-4">
 
                                 <span class="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 text-cyan-600 px-3 py-1.5 text-xs font-black">
 
@@ -570,14 +623,14 @@
                         {{-- ACTIONS --}}
                         {{-- ================================================= --}}
 
-                        <div class="mt-6 flex flex-col gap-3">
+                        <div class="mentor-actions pt-5 flex flex-col gap-3">
 
 
                             {{-- PROFILE --}}
 
                             <a
                                 href="{{ route('profiles.alumni.show', $mentor) }}"
-                                class="uc-button w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 py-3 text-white font-black shadow-xl text-center"
+                                class="uc-button mentor-profile-button w-full rounded-2xl py-3 font-black text-center"
                             >
 
                                 <i class="fas fa-user mr-2"></i>
@@ -621,7 +674,7 @@
                                             rows="3"
                                             maxlength="2000"
                                             placeholder="Tell the mentor what kind of guidance you need..."
-                                            class="w-full rounded-2xl border border-purple-500/20 bg-purple-500/5 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+                                            class="mentor-message w-full rounded-2xl border border-purple-500/20 bg-purple-500/5 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
                                         ></textarea>
 
                                     </div>
@@ -800,6 +853,18 @@
 
 
         </div>
+
+        {{-- ========================================================= --}}
+        {{-- PAGINATION --}}
+        {{-- ========================================================= --}}
+
+        @if($mentors->hasPages())
+            <div class="uc-card p-4 sm:p-5">
+                <div class="relative z-10">
+                    {{ $mentors->onEachSide(1)->links() }}
+                </div>
+            </div>
+        @endif
 
     </div>
 

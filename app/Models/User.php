@@ -303,23 +303,49 @@ public function currentWorkExperience()
     */
 
     public function getProfileImageUrl(): string
-    {
-        if (empty($this->profile_image)) {
-            return 'https://ui-avatars.com/api/?name='
-                . urlencode($this->name)
-                . '&background=6366f1&color=ffffff&size=256';
-        }
+{
+    if (empty($this->profile_image)) {
+        return 'https://ui-avatars.com/api/?name='
+            . urlencode($this->name)
+            . '&background=6366f1&color=ffffff&size=256';
+    }
 
-        if (
-            str_starts_with($this->profile_image, 'http://')
-            || str_starts_with($this->profile_image, 'https://')
-        ) {
-            return $this->profile_image;
-        }
+    if (
+        str_starts_with(
+            $this->profile_image,
+            'http://'
+        )
+        ||
+        str_starts_with(
+            $this->profile_image,
+            'https://'
+        )
+    ) {
+        return $this->profile_image;
+    }
 
-        return asset(
-            'storage/' .
-            ltrim($this->profile_image, '/')
+    if (
+        str_starts_with(
+            $this->profile_image,
+            'private/encrypted/'
+        )
+    ) {
+        return route(
+            'secure.profile.image',
+            $this
         );
     }
+
+    /*
+     * Old public image.
+     * Keep working until migration.
+     */
+    return asset(
+        'storage/' .
+        ltrim(
+            $this->profile_image,
+            '/'
+        )
+    );
+}
 }

@@ -35,6 +35,7 @@ use App\Http\Controllers\SuperAdmin\SuperAdminManagementController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Alumni\DashboardController as AlumniDashboardController;
 use App\Http\Controllers\AlumniConversionController;
+use App\Http\Controllers\SecureFileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -88,6 +89,42 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
 
+
+
+     /*
+|--------------------------------------------------------------------------
+| Secure Encrypted Files
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/secure/profile/{user}/image',
+    [SecureFileController::class, 'profileImage']
+)->name('secure.profile.image');
+
+
+Route::get(
+    '/secure/donations/{donation}/image',
+    [SecureFileController::class, 'donationImage']
+)->name('secure.donations.image');
+
+
+Route::get(
+    '/secure/donation-payments/{payment}/screenshot',
+    [SecureFileController::class, 'paymentScreenshot']
+)->name('secure.donation-payments.screenshot');
+
+
+Route::get(
+    '/secure/messages/{message}/attachment',
+    [SecureFileController::class, 'messageAttachment']
+)->name('secure.messages.attachment');
+
+
+Route::get(
+    '/secure/resumes/{resumeAnalysis}/file',
+    [SecureFileController::class, 'resume']
+)->name('secure.resumes.file');
     /*
     |--------------------------------------------------------------------------
     | Stripe Donation Routes

@@ -16,47 +16,17 @@ class NewsfeedController extends Controller
     {
         $feedItems = collect();
 
-        if (class_exists(Job::class) && Schema::hasTable('jobs')) {
-            $jobsQuery = Job::query();
+        $feedItems = $feedItems->merge(
+            $this->loadFeedModels(Job::class, 'job')
+        );
 
-            if (Schema::hasColumn('jobs', 'status')) {
-                $jobsQuery->whereIn('status', ['approved', 'active', 'published']);
-            }
+        $feedItems = $feedItems->merge(
+            $this->loadFeedModels(Event::class, 'event')
+        );
 
-            $jobs = $jobsQuery->latest()->take(30)->get()->map(function ($job) {
-                return $this->makeFeedItem('job', $job);
-            });
-
-            $feedItems = $feedItems->merge($jobs);
-        }
-
-        if (class_exists(Event::class) && Schema::hasTable('events')) {
-            $eventsQuery = Event::query();
-
-            if (Schema::hasColumn('events', 'status')) {
-                $eventsQuery->whereIn('status', ['approved', 'active', 'published']);
-            }
-
-            $events = $eventsQuery->latest()->take(30)->get()->map(function ($event) {
-                return $this->makeFeedItem('event', $event);
-            });
-
-            $feedItems = $feedItems->merge($events);
-        }
-
-        if (class_exists(Donation::class) && Schema::hasTable('donations')) {
-            $donationsQuery = Donation::query();
-
-            if (Schema::hasColumn('donations', 'status')) {
-                $donationsQuery->whereIn('status', ['approved', 'active', 'published']);
-            }
-
-            $donations = $donationsQuery->latest()->take(30)->get()->map(function ($donation) {
-                return $this->makeFeedItem('donation', $donation);
-            });
-
-            $feedItems = $feedItems->merge($donations);
-        }
+        $feedItems = $feedItems->merge(
+            $this->loadFeedModels(Donation::class, 'donation')
+        );
 
         $feedItems = $feedItems
             ->sortByDesc('rank_score')
@@ -65,23 +35,102 @@ class NewsfeedController extends Controller
         return view('newsfeed.index', compact('feedItems'));
     }
 
+    private function loadFeedModels(string $modelClass, string $type)
+    {
+        if (!class_exists($modelClass)) {
+            return collect();
+        }
+
+        $model = new $modelClass();
+        $table = $model->getTable();
+
+        if (!Schema::hasTable($table)) {
+            return collect();
+        }
+
+        $query = $modelClass::query();
+
+        if (Schema::hasColumn($table, 'status')) {
+            $allowedStatuses = match ($type) {
+                'job' => ['approved', 'active', 'published', 'open'],
+                'event', 'donation' => ['approved', 'active', 'published'],
+                default => ['approved', 'active', 'published'],
+            };
+
+            $query->whereIn('status', $allowedStatuses);
+        }
+
+        /*
+         * Do not hard-code a "jobs" table here.
+         * The Job model decides whether the real table is jobs/job_postings.
+         */
+
+        if ($type === 'job') {
+            if (Schema::hasColumn($table, 'deadline')) {
+                $query->where(function ($q) {
+                    $q->whereNull('deadline')
+                        ->orWhereDate('deadline', '>=', today());
+                });
+            }
+
+            if (Schema::hasColumn($table, 'application_deadline')) {
+                $query->where(function ($q) {
+                    $q->whereNull('application_deadline')
+                        ->orWhereDate('application_deadline', '>=', today());
+                });
+            }
+        }
+
+        /*
+         * Keep a reasonable server-side candidate pool.
+         * The Blade shows 12 first and Load More reveals the rest.
+         */
+        return $query
+            ->latest()
+            ->take(60)
+            ->get()
+            ->map(fn ($item) => $this->makeFeedItem($type, $item));
+    }
+
     private function makeFeedItem(string $type, $model): array
     {
         $feedableType = get_class($model);
-        $feedableId = $model->id;
+        $feedableId = (int) $model->id;
 
-        $likesCount = $this->countTable(FeedLike::class, 'feed_likes', $feedableType, $feedableId);
-        $commentsCount = $this->countTable(FeedComment::class, 'feed_comments', $feedableType, $feedableId);
-        $sharesCount = $this->countTable(FeedShare::class, 'feed_shares', $feedableType, $feedableId);
+        $likesCount = $this->countTable(
+            FeedLike::class,
+            'feed_likes',
+            $feedableType,
+            $feedableId
+        );
+
+        $commentsCount = $this->countTable(
+            FeedComment::class,
+            'feed_comments',
+            $feedableType,
+            $feedableId
+        );
+
+        $sharesCount = $this->countTable(
+            FeedShare::class,
+            'feed_shares',
+            $feedableType,
+            $feedableId
+        );
 
         $createdAt = $model->created_at ?? now();
+        $ageHours = max(0, now()->diffInHours($createdAt));
 
-        $ageHours = max(1, now()->diffInHours($createdAt));
-
-        // Recent + Reach ranking
-        // Recent post আগে থাকবে, কিন্তু বেশি like/comment/share থাকলে কয়েকদিন boost পাবে
-        $recencyScore = max(0, 120 - $ageHours);
-        $engagementScore = ($likesCount * 3) + ($commentsCount * 6) + ($sharesCount * 8);
+        /*
+         * Freshness is primary.
+         * Engagement gives a useful boost, but is deliberately lighter than before
+         * so an old viral item does not dominate the feed for too long.
+         */
+        $recencyScore = max(0, 168 - $ageHours);
+        $engagementScore =
+            ($likesCount * 2)
+            + ($commentsCount * 4)
+            + ($sharesCount * 5);
 
         $rankScore = $recencyScore + $engagementScore;
 
@@ -92,7 +141,10 @@ class NewsfeedController extends Controller
 
             'title' => $model->title ?? $this->defaultTitle($type),
             'description' => $model->description ?? '',
-            'image' => $model->cover_image ?? $model->image ?? null,
+            'image' => $model->cover_image
+                ?? $model->image
+                ?? $model->job_image
+                ?? null,
 
             'badge' => $this->badge($type),
             'icon' => $this->icon($type),
@@ -100,7 +152,6 @@ class NewsfeedController extends Controller
 
             'date' => $createdAt,
             'url' => $this->url($type, $model),
-
             'meta' => $this->meta($type, $model),
 
             'likes_count' => $likesCount,
@@ -113,8 +164,12 @@ class NewsfeedController extends Controller
         ];
     }
 
-    private function countTable(string $modelClass, string $table, string $type, int $id): int
-    {
+    private function countTable(
+        string $modelClass,
+        string $table,
+        string $type,
+        int $id
+    ): int {
         if (!class_exists($modelClass) || !Schema::hasTable($table)) {
             return 0;
         }
@@ -126,7 +181,7 @@ class NewsfeedController extends Controller
 
     private function likedByMe(string $type, int $id): bool
     {
-        if (!Schema::hasTable('feed_likes')) {
+        if (!auth()->check() || !Schema::hasTable('feed_likes')) {
             return false;
         }
 
@@ -208,16 +263,21 @@ class NewsfeedController extends Controller
                 $model->location ?? null,
                 $model->type ?? null,
             ],
+
             'event' => [
                 $model->location ?? null,
                 $model->start_date ?? $model->event_date ?? null,
                 $model->type ?? null,
             ],
+
             'donation' => [
                 $model->category ?? null,
-                isset($model->target_amount) ? 'Target: ' . $model->target_amount : null,
+                isset($model->target_amount)
+                    ? 'Target: ' . $model->target_amount
+                    : null,
                 $model->deadline ?? null,
             ],
+
             default => [],
         };
     }

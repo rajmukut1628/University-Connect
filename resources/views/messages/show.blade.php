@@ -521,7 +521,12 @@
                                     {{-- ================================= --}}
 
                                     @if($message->attachment)
-
+                                    @php
+                                       $attachmentUrl = route(
+                                     'secure.messages.attachment',
+                                        $message
+                                         );
+                                    @endphp
                                         <div
                                             class="
                                                 {{ $message->content
@@ -536,12 +541,12 @@
                                             @if($isImage)
 
                                                 <a
-                                                    href="{{ asset('storage/' . $message->attachment) }}"
+                                                    href="{{ $attachmentUrl }}"
                                                     target="_blank"
                                                 >
 
                                                     <img
-                                                        src="{{ asset('storage/' . $message->attachment) }}"
+                                                        src="{{ $attachmentUrl }}"
                                                         alt="{{ $message->attachment_name ?? 'Image' }}"
                                                         class="
                                                             chat-attachment-image
@@ -566,7 +571,7 @@
                                                 >
 
                                                     <source
-                                                        src="{{ asset('storage/' . $message->attachment) }}"
+                                                        src="{{ $attachmentUrl }}"
                                                         type="{{ $message->attachment_type }}"
                                                     >
 
@@ -586,7 +591,7 @@
                                                 >
 
                                                     <source
-                                                        src="{{ asset('storage/' . $message->attachment) }}"
+                                                        src="{{ $attachmentUrl }}"
                                                         type="{{ $message->attachment_type }}"
                                                     >
 
@@ -598,7 +603,7 @@
                                             @else
 
                                                 <a
-                                                    href="{{ asset('storage/' . $message->attachment) }}"
+                                                    href="{{ $attachmentUrl }}"
                                                     target="_blank"
                                                     class="
                                                         flex

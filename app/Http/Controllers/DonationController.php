@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EncryptedFileService;
 use App\Models\Donation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -36,9 +37,14 @@ class DonationController extends Controller
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
 
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('donation-images', 'public');
-        }
+            if ($request->hasFile('image')) {
+             $validated['image'] =
+                app(EncryptedFileService::class)
+             ->store(
+                $request->file('image'),
+                'donation-images'
+             );
+            }
 
         $validated['user_id'] = auth()->id();
         $validated['collected_amount'] = 0;
@@ -87,8 +93,12 @@ class DonationController extends Controller
             403
         );
 
-        if ($donation->image && Storage::disk('public')->exists($donation->image)) {
-            Storage::disk('public')->delete($donation->image);
+        if ($donation->image) {
+         app(
+            EncryptedFileService::class
+           )->delete(
+           $donation->image
+           );
         }
 
         $donation->delete();

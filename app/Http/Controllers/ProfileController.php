@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EncryptedFileService;
 use App\Services\ProfileStrengthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -240,25 +241,30 @@ class ProfileController extends Controller
         | Profile Image
         |--------------------------------------------------------------------------
         */
-        unset($validated['profile_image']);
+         unset($validated['profile_image']);
 
-        if ($request->hasFile('profile_image')) {
-            if (
-                $user->profile_image
-                && Storage::disk('public')->exists($user->profile_image)
-            ) {
-                Storage::disk('public')->delete(
-                    $user->profile_image
-                );
-            }
+       if ($request->hasFile('profile_image')) {
 
-            $validated['profile_image'] = $request
-                ->file('profile_image')
-                ->store(
-                    'profile-images',
-                    'public'
-                );
-        }
+    $encryptedFiles = app(
+        EncryptedFileService::class
+    );
+
+    if ($user->profile_image) {
+        $encryptedFiles->delete(
+            $user->profile_image
+        );
+    }
+
+    /*
+     * Encrypt and save new profile image
+     * inside private storage.
+     */
+    $validated['profile_image'] =
+        $encryptedFiles->store(
+            $request->file('profile_image'),
+            'profile-images'
+        );
+       }
 
         /*
         |--------------------------------------------------------------------------
@@ -294,14 +300,13 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        if (
-            $user->profile_image
-            && Storage::disk('public')->exists($user->profile_image)
-        ) {
-            Storage::disk('public')->delete(
-                $user->profile_image
-            );
-        }
+        if ($user->profile_image) {
+          app(
+           EncryptedFileService::class
+           )->delete(
+           $user->profile_image
+           );
+       }
 
         auth()->guard()->logout();
 

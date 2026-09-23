@@ -11,33 +11,51 @@ class FeedActionController extends Controller
 {
     public function like(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'feedable_type' => ['required', 'string'],
             'feedable_id' => ['required', 'integer'],
         ]);
 
-        $like = FeedLike::where('user_id', auth()->id())
-            ->where('feedable_type', $request->feedable_type)
-            ->where('feedable_id', $request->feedable_id)
-            ->first();
+        $query = FeedLike::where('user_id', auth()->id())
+            ->where('feedable_type', $validated['feedable_type'])
+            ->where('feedable_id', $validated['feedable_id']);
+
+        $like = $query->first();
+        $liked = false;
 
         if ($like) {
             $like->delete();
-            return back()->with('success', 'Like removed.');
+        } else {
+            FeedLike::create([
+                'user_id' => auth()->id(),
+                'feedable_type' => $validated['feedable_type'],
+                'feedable_id' => $validated['feedable_id'],
+            ]);
+
+            $liked = true;
         }
 
-        FeedLike::create([
-            'user_id' => auth()->id(),
-            'feedable_type' => $request->feedable_type,
-            'feedable_id' => $request->feedable_id,
-        ]);
+        $likesCount = FeedLike::where('feedable_type', $validated['feedable_type'])
+            ->where('feedable_id', $validated['feedable_id'])
+            ->count();
 
-        return back()->with('success', 'Post liked.');
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'liked' => $liked,
+                'likes_count' => $likesCount,
+            ]);
+        }
+
+        return back()->with(
+            'success',
+            $liked ? 'Post liked.' : 'Like removed.'
+        );
     }
 
     public function comment(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'feedable_type' => ['required', 'string'],
             'feedable_id' => ['required', 'integer'],
             'comment' => ['required', 'string', 'max:1000'],
@@ -45,9 +63,9 @@ class FeedActionController extends Controller
 
         FeedComment::create([
             'user_id' => auth()->id(),
-            'feedable_type' => $request->feedable_type,
-            'feedable_id' => $request->feedable_id,
-            'comment' => $request->comment,
+            'feedable_type' => $validated['feedable_type'],
+            'feedable_id' => $validated['feedable_id'],
+            'comment' => $validated['comment'],
         ]);
 
         return back()->with('success', 'Comment added.');
@@ -55,17 +73,37 @@ class FeedActionController extends Controller
 
     public function share(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'feedable_type' => ['required', 'string'],
             'feedable_id' => ['required', 'integer'],
         ]);
 
-        FeedShare::create([
+        $share = FeedShare::firstOrCreate([
             'user_id' => auth()->id(),
-            'feedable_type' => $request->feedable_type,
-            'feedable_id' => $request->feedable_id,
+            'feedable_type' => $validated['feedable_type'],
+            'feedable_id' => $validated['feedable_id'],
         ]);
 
-        return back()->with('success', 'Post shared.');
+        $sharesCount = FeedShare::where('feedable_type', $validated['feedable_type'])
+            ->where('feedable_id', $validated['feedable_id'])
+            ->count();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'created' => $share->wasRecentlyCreated,
+                'shares_count' => $sharesCount,
+                'message' => $share->wasRecentlyCreated
+                    ? 'Share recorded successfully.'
+                    : 'Share already recorded.',
+            ]);
+        }
+
+        return back()->with(
+            'success',
+            $share->wasRecentlyCreated
+                ? 'Post shared.'
+                : 'You have already shared this post.'
+        );
     }
 }

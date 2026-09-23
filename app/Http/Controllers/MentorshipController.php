@@ -53,12 +53,35 @@ class MentorshipController extends Controller
             );
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Mentor Pagination
+        |--------------------------------------------------------------------------
+        |
+        | Show a maximum of 20 mentors per page.
+        | withQueryString() keeps search and department filters when the
+        | student moves between pagination pages.
+        |
+        */
+
         $mentors = $query
             ->orderBy('name')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Current Student's Requests
+        |--------------------------------------------------------------------------
+        |
+        | We only need mentorship statuses for mentors visible on the
+        | current page. This keeps the page lighter as the database grows.
+        |
+        */
 
         $myRequests = Mentorship::query()
             ->where('student_id', $student->id)
+            ->whereIn('mentor_id', $mentors->pluck('id'))
             ->get()
             ->keyBy('mentor_id');
 

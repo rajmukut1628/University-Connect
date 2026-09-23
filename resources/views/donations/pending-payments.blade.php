@@ -293,13 +293,13 @@
 
 
                                     <a
-                                        href="{{ asset('storage/' . $payment->screenshot) }}"
+                                        href="{{ route('secure.donation-payments.screenshot', $payment) }}"
                                         target="_blank"
                                         rel="noopener"
                                     >
 
                                         <img
-                                            src="{{ asset('storage/' . $payment->screenshot) }}"
+                                            src="{{ route('secure.donation-payments.screenshot', $payment) }}"
                                             alt="Payment Screenshot"
                                             class="max-h-64
                                                    rounded-2xl

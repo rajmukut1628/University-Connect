@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\EncryptedFileService;
 use App\Models\Donation;
 use App\Models\DonationManualPayment;
 use App\Services\NotificationService;
@@ -81,13 +82,15 @@ class DonationManualPaymentController extends Controller
 
         $screenshotPath = null;
 
+        $screenshotPath = null;
+
         if ($request->hasFile('screenshot')) {
-            $screenshotPath = $request
-                ->file('screenshot')
-                ->store(
-                    'donation-payments',
-                    'public'
-                );
+          $screenshotPath =
+         app(EncryptedFileService::class)
+            ->store(
+                $request->file('screenshot'),
+                'donation-payments'
+            );
         }
 
 

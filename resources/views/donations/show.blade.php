@@ -299,7 +299,7 @@
                         shadow-2xl">
 
                 <img
-                    src="{{ asset('storage/' . $donation->image) }}"
+                    src="{{ route('secure.donations.image', $donation) }}"
                     alt="{{ $donation->title }}"
                     class="w-full
                            max-h-[500px]
