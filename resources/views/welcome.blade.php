@@ -1648,7 +1648,7 @@
                             font-bold
                         "
                     >
-                        Campus Network
+                        AI Powered Campus Network
                     </p>
 
                 </div>
@@ -3122,7 +3122,7 @@
 
                     <div class="v4-data-pod v4-pod-1">
                         <strong><i class="fas fa-user-graduate"></i>Student Layer</strong>
-                        <small>Verified campus network</small>
+                        <small>Campus Network</small>
                     </div>
                     <div class="v4-data-pod v4-pod-2">
                         <strong><i class="fas fa-user-tie"></i>Alumni Layer</strong>
@@ -3192,7 +3192,7 @@
                             <span class="text-[10px] uppercase tracking-[.2em] font-black text-cyan-300">Network / 01</span>
                         </div>
                         <div class="mt-auto pt-12">
-                            <h4 class="text-3xl md:text-4xl font-black">Verified Campus Network</h4>
+                            <h4 class="text-3xl md:text-4xl font-black">Campus Network</h4>
                             <p class="mt-3 text-slate-400 leading-7 max-w-xl">
                                 Students and Alumni stay connected through university-provided verified account access.
                             </p>
@@ -3331,7 +3331,7 @@
                     <div class="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-fuchsia-500/10 blur-3xl"></div>
                     <div class="absolute -left-16 -bottom-20 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl"></div>
                     <div class="relative z-10 h-full flex flex-col justify-center">
-                        <span class="v4-kicker w-fit"><span class="v4-signal"></span>Verified Campus Network</span>
+                        <span class="v4-kicker w-fit"><span class="v4-signal"></span>Campus Network</span>
                         <h3 class="text-4xl md:text-6xl font-black tracking-[-.05em] leading-[1] mt-6">
                             Enter the
                             <span class="v4-liquid-text">University Connect.</span>
@@ -3434,7 +3434,7 @@
                             "
                         >
 
-                            Verified Campus Network
+                            Campus Network
 
                         </p>
 
