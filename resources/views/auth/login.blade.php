@@ -100,7 +100,7 @@
 
                     <p class="mt-2 text-sm text-slate-300">
 
-                        Enter your email or Official ID and password
+                        Enter your email and password
 
                     </p>
 
@@ -132,7 +132,7 @@
                             class="text-sm font-bold text-slate-200"
                         >
 
-                            Email or Official ID
+                            Email
 
                         </label>
 
@@ -146,7 +146,7 @@
                             autofocus
                             autocomplete="username"
                             class="mt-2 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white placeholder-slate-400 focus:border-cyan-400 focus:ring-cyan-400"
-                            placeholder="Email or Official ID"
+                            placeholder="Enter Your Verified Email"
                         >
 
 
