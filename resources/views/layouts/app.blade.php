@@ -1153,12 +1153,7 @@
                 request()->routeIs('newsfeed.*')
             ),
 
-            $makeNavItem(
-                'Ask AI',
-                'fa-robot',
-                $askAiRoute,
-                request()->routeIs('ask-ai.*')
-            ),
+            
 
             $makeNavItem(
                 'Mentors',
@@ -1267,13 +1262,6 @@
         ];
 
         $moreNavItems = [
-
-            $makeNavItem(
-                'Ask AI',
-                'fa-robot',
-                $askAiRoute,
-                request()->routeIs('ask-ai.*')
-            ),
 
             $makeNavItem(
                 'Events',
