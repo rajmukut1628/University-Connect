@@ -853,7 +853,7 @@
            Desktop navbar disappears before items become compressed.
         ========================================================= */
 
-        @media (max-width: 1279px) {
+        @media (max-width: 1023px) {
 
             .uc-desktop-nav {
                 display: none !important;
@@ -874,11 +874,71 @@
             }
         }
 
+        /* Keep all desktop navigation items in the TOP navbar on
+           normal laptops and browser zoom levels. */
+        @media (min-width: 1024px) and (max-width: 1500px) {
+
+            .uc-topbar {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+            }
+
+            .uc-topbar-inner {
+                gap: 6px;
+            }
+
+            .uc-brand {
+                gap: 7px;
+            }
+
+            .uc-logo-box {
+                height: 38px;
+                width: 38px;
+                border-radius: 14px;
+            }
+
+            .uc-brand-title {
+                font-size: 11px;
+            }
+
+            .uc-brand-subtitle {
+                font-size: 8px;
+            }
+
+            .uc-nav-row {
+                gap: 3px;
+                padding: 4px;
+            }
+
+            .uc-nav {
+                min-height: 36px;
+                padding: 0 7px;
+                font-size: 9px;
+                gap: 4px;
+            }
+
+            .uc-profile-pill {
+                min-width: 132px;
+                max-width: 150px;
+                padding: 6px !important;
+            }
+
+            .uc-profile-avatar {
+                height: 34px;
+                width: 34px;
+            }
+
+            .uc-role-badge {
+                padding: 0 6px;
+                font-size: 7px;
+            }
+        }
+
         /* =========================================================
            DESKTOP ONLY
         ========================================================= */
 
-        @media (min-width: 1280px) {
+        @media (min-width: 1024px) {
 
             .uc-mobile-menu-btn {
                 display: none !important;
@@ -1194,10 +1254,14 @@
             ),
         ];
 
-        $mobileNavItems = array_merge(
+        $primaryNavItems = array_merge(
             $primaryNavItems,
             $moreNavItems
         );
+
+        $moreNavItems = [];
+
+        $mobileNavItems = $primaryNavItems;
     }
 
     /*
@@ -1278,10 +1342,14 @@
             ),
         ];
 
-        $mobileNavItems = array_merge(
+        $primaryNavItems = array_merge(
             $primaryNavItems,
             $moreNavItems
         );
+
+        $moreNavItems = [];
+
+        $mobileNavItems = $primaryNavItems;
     }
 
     /*
@@ -1372,16 +1440,6 @@
             ),
 
             $makeNavItem(
-                'Verification',
-                'fa-user-check',
-                $verificationRoute,
-                request()->routeIs(
-                    'admin.verification.*',
-                    'superadmin.verification.*'
-                )
-            ),
-
-            $makeNavItem(
                 'Users',
                 'fa-users-cog',
                 $usersRoute,
@@ -1459,10 +1517,14 @@
             );
         }
 
-        $mobileNavItems = array_merge(
+        $primaryNavItems = array_merge(
             $primaryNavItems,
             $moreNavItems
         );
+
+        $moreNavItems = [];
+
+        $mobileNavItems = $primaryNavItems;
     }
 
     /*
@@ -2261,7 +2323,7 @@
             fixed
             inset-0
             z-[9999999]
-            xl:hidden
+            lg:hidden
         "
     >
 
