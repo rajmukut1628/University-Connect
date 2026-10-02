@@ -1219,6 +1219,10 @@ Route::middleware(['role:alumni'])
                 '/events/create',
                 [EventController::class, 'create']
             )->name('events.create');
+            Route::get(
+    '/events/{event}',
+    [EventController::class, 'show']
+)->name('events.show');
 
 
             Route::post(
@@ -1241,26 +1245,56 @@ Route::middleware(['role:alumni'])
 
 
     Route::middleware(['role:admin,super_admin'])
-        ->group(function () {
+    ->group(function () {
 
-            Route::get(
-                '/admin/event-participants/pending',
-                [EventController::class, 'pendingParticipants']
-            )->name('event.participants.pending');
+        /*
+        |--------------------------------------------------------------------------
+        | Event Management
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/events/{event}/edit',
+            [EventController::class, 'edit']
+        )->name('events.edit');
 
 
-            Route::patch(
-                '/event-participants/{participant}/approve',
-                [EventController::class, 'approveParticipant']
-            )->name('event.participants.approve');
+        Route::patch(
+            '/events/{event}',
+            [EventController::class, 'update']
+        )->name('events.update');
 
 
-            Route::patch(
-                '/event-participants/{participant}/reject',
-                [EventController::class, 'rejectParticipant']
-            )->name('event.participants.reject');
+        Route::delete(
+            '/events/{event}',
+            [EventController::class, 'destroy']
+        )->name('events.destroy');
 
-        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Event Participant Management
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/admin/event-participants/pending',
+            [EventController::class, 'pendingParticipants']
+        )->name('event.participants.pending');
+
+
+        Route::patch(
+            '/event-participants/{participant}/approve',
+            [EventController::class, 'approveParticipant']
+        )->name('event.participants.approve');
+
+
+        Route::patch(
+            '/event-participants/{participant}/reject',
+            [EventController::class, 'rejectParticipant']
+        )->name('event.participants.reject');
+
+    });
 
 
     /*

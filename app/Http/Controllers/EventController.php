@@ -753,4 +753,458 @@ class EventController extends Controller
             'Participant rejected successfully.'
         );
     }
+        /*
+    |--------------------------------------------------------------------------
+    | Edit Event
+    |--------------------------------------------------------------------------
+    */
+
+    public function edit(Event $event)
+    {
+        $user = auth()->user();
+
+        if (
+            !$user ||
+            !in_array(
+                $user->role,
+                [
+                    'admin',
+                    'super_admin',
+                ],
+                true
+            )
+        ) {
+            abort(
+                403,
+                'UNAUTHORIZED ACCESS.'
+            );
+        }
+
+        return view(
+            'events.edit',
+            compact('event')
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Update Event
+    |--------------------------------------------------------------------------
+    */
+
+    public function update(
+        Request $request,
+        Event $event
+    ) {
+        $user = auth()->user();
+
+        if (
+            !$user ||
+            !in_array(
+                $user->role,
+                [
+                    'admin',
+                    'super_admin',
+                ],
+                true
+            )
+        ) {
+            abort(
+                403,
+                'UNAUTHORIZED ACCESS.'
+            );
+        }
+
+
+        $request->validate([
+
+            'title' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'description' => [
+                'required',
+                'string',
+            ],
+
+            'type' => [
+                'required',
+                'string',
+                'max:100',
+            ],
+
+            'location' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'start_date' => [
+                'required',
+                'date',
+            ],
+
+            'start_time' => [
+                'required',
+            ],
+
+            'end_date' => [
+                'required',
+                'date',
+                'after_or_equal:start_date',
+            ],
+
+            'end_time' => [
+                'required',
+            ],
+
+            'capacity' => [
+                'nullable',
+                'integer',
+                'min:1',
+            ],
+
+            'cover_image' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:4096',
+            ],
+
+            'status' => [
+                'required',
+                'in:active,published,approved,draft,pending',
+            ],
+
+        ]);
+
+
+        $coverPath = $event->cover_image;
+
+
+        if ($request->hasFile('cover_image')) {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Delete old public cover if it exists
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                $event->cover_image &&
+                \Illuminate\Support\Facades\Storage::disk('public')
+                    ->exists($event->cover_image)
+            ) {
+                \Illuminate\Support\Facades\Storage::disk('public')
+                    ->delete($event->cover_image);
+            }
+
+
+            $coverPath = $request
+                ->file('cover_image')
+                ->store(
+                    'events/covers',
+                    'public'
+                );
+        }
+
+
+        $eventDateTime =
+            $request->start_date .
+            ' ' .
+            $request->start_time;
+
+
+        $event->update([
+
+            'title' =>
+                $request->title,
+
+            'description' =>
+                $request->description,
+
+            'type' =>
+                $request->type,
+
+            'location' =>
+                $request->location,
+
+            'event_date' =>
+                $eventDateTime,
+
+            'start_date' =>
+                $request->start_date,
+
+            'start_time' =>
+                $request->start_time,
+
+            'end_date' =>
+                $request->end_date,
+
+            'end_time' =>
+                $request->end_time,
+
+            'capacity' =>
+                $request->capacity,
+
+            'cover_image' =>
+                $coverPath,
+
+            'status' =>
+                $request->status,
+
+        ]);
+
+
+        NotificationService::management(
+
+            'event_updated',
+
+            'Event Updated',
+
+            $user->name .
+                ' updated the event "' .
+                $event->title .
+                '".',
+
+            route('events.index'),
+
+            'medium',
+
+            $event,
+
+            $user
+
+        );
+
+
+        return redirect()
+            ->route('events.index')
+            ->with(
+                'success',
+                'Event updated successfully.'
+            );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Delete Event
+    |--------------------------------------------------------------------------
+    */
+
+    public function destroy(Event $event)
+    {
+        $user = auth()->user();
+
+        if (
+            !$user ||
+            !in_array(
+                $user->role,
+                [
+                    'admin',
+                    'super_admin',
+                ],
+                true
+            )
+        ) {
+            abort(
+                403,
+                'UNAUTHORIZED ACCESS.'
+            );
+        }
+
+
+        $eventTitle = $event->title;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Delete cover image
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            $event->cover_image &&
+            \Illuminate\Support\Facades\Storage::disk('public')
+                ->exists($event->cover_image)
+        ) {
+            \Illuminate\Support\Facades\Storage::disk('public')
+                ->delete($event->cover_image);
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Delete participant records first
+        |--------------------------------------------------------------------------
+        */
+
+        EventParticipant::where(
+            'event_id',
+            $event->id
+        )->delete();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Delete Event
+        |--------------------------------------------------------------------------
+        */
+
+        $event->delete();
+
+
+        NotificationService::management(
+
+            'event_deleted',
+
+            'Event Deleted',
+
+            $user->name .
+                ' deleted the event "' .
+                $eventTitle .
+                '".',
+
+            route('events.index'),
+
+            'medium',
+
+            null,
+
+            $user
+
+        );
+
+
+        return redirect()
+            ->route('events.index')
+            ->with(
+                'success',
+                'Event deleted successfully.'
+            );
+    }
+    /*
+|--------------------------------------------------------------------------
+| Show Event Details
+|--------------------------------------------------------------------------
+*/
+
+public function show(Event $event)
+{
+    $user = auth()->user();
+
+    abort_unless(
+        $user &&
+        in_array(
+            $user->role,
+            [
+                'student',
+                'alumni',
+                'admin',
+                'super_admin',
+            ],
+            true
+        ),
+        403,
+        'UNAUTHORIZED ACCESS.'
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Load Event Information
+    |--------------------------------------------------------------------------
+    */
+
+    $event->load([
+        'creator',
+        'participants.user',
+    ]);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | User Registration
+    |--------------------------------------------------------------------------
+    */
+
+    $myRegistration = null;
+
+    if (
+        in_array(
+            $user->role,
+            ['student', 'alumni'],
+            true
+        )
+    ) {
+        $myRegistration = EventParticipant::query()
+            ->where('event_id', $event->id)
+            ->where('user_id', $user->id)
+            ->first();
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Participant Information
+    |--------------------------------------------------------------------------
+    */
+
+    $participantCount =
+        $event->participants->count();
+
+    $approvedCount =
+        $event->participants
+            ->where('status', 'approved')
+            ->count();
+
+    $pendingCount =
+        $event->participants
+            ->where('status', 'pending')
+            ->count();
+
+
+    $isFull =
+        $event->capacity &&
+        $participantCount >= $event->capacity;
+
+
+    $isOpen = in_array(
+        $event->status,
+        [
+            'active',
+            'published',
+            'approved',
+        ],
+        true
+    );
+
+
+    $isAdminPanel = in_array(
+        $user->role,
+        [
+            'admin',
+            'super_admin',
+        ],
+        true
+    );
+
+
+    return view(
+        'events.show',
+        compact(
+            'event',
+            'myRegistration',
+            'participantCount',
+            'approvedCount',
+            'pendingCount',
+            'isFull',
+            'isOpen',
+            'isAdminPanel'
+        )
+    );
+}
 }

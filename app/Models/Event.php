@@ -10,27 +10,25 @@ class Event extends Model
     use HasFactory;
 
     protected $fillable = [
-    'title',
-    'description',
-    'type',
-    'location',
-    'event_date',
-    'start_date',
-    'start_time',
-    'end_date',
-    'end_time',
-    'capacity',
-    'cover_image',
-    'status',
-    'created_by',
-];
+        'title',
+        'description',
+        'type',
+        'location',
+        'event_date',
+        'start_date',
+        'start_time',
+        'end_date',
+        'end_time',
+        'capacity',
+        'cover_image',
+        'status',
+        'created_by',
+    ];
 
     protected $casts = [
         'event_date' => 'datetime',
         'start_date' => 'date',
-        'start_time' => 'time',
         'end_date' => 'date',
-        'end_time' => 'time',
         'capacity' => 'integer',
     ];
 
@@ -64,7 +62,11 @@ class Event extends Model
 
     public function isOpen(): bool
     {
-        return in_array($this->status, ['active', 'published']);
+        return in_array(
+            $this->status,
+            ['active', 'published'],
+            true
+        );
     }
 
     public function approvedParticipantsCount(): int

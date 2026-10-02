@@ -967,20 +967,98 @@
 
                             @if($isAdminPanel)
 
-                                <div class="w-full
-                                            rounded-2xl
-                                            bg-slate-500/15
-                                            text-slate-500
-                                            py-3
-                                            text-center
-                                            font-black">
+    <div class="grid grid-cols-2 gap-3">
 
-                                    <i class="fas fa-shield-halved mr-2"></i>
+        {{-- EDIT EVENT --}}
 
-                                    Management Event
+        <a
+            href="{{ route(
+                'events.edit',
+                $event
+            ) }}"
 
-                                </div>
+            class="inline-flex
+                   items-center
+                   justify-center
+                   gap-2
+                   rounded-2xl
+                   bg-gradient-to-r
+                   from-cyan-500
+                   to-blue-600
+                   px-4
+                   py-3
+                   text-sm
+                   font-black
+                   text-white
+                   shadow-lg
+                   shadow-cyan-500/20
+                   transition
+                   hover:scale-[1.03]
+                   hover:shadow-xl"
+        >
 
+            <i class="fas fa-pen-to-square"></i>
+
+            Edit Event
+
+        </a>
+
+
+        {{-- DELETE EVENT --}}
+
+        <form
+            method="POST"
+
+            action="{{ route(
+                'events.destroy',
+                $event
+            ) }}"
+
+            onsubmit="
+                return confirm(
+                    'Are you sure you want to delete this event? This action cannot be undone.'
+                );
+            "
+        >
+
+            @csrf
+
+            @method('DELETE')
+
+
+            <button
+                type="submit"
+
+                class="inline-flex
+                       w-full
+                       items-center
+                       justify-center
+                       gap-2
+                       rounded-2xl
+                       bg-gradient-to-r
+                       from-red-500
+                       to-rose-600
+                       px-4
+                       py-3
+                       text-sm
+                       font-black
+                       text-white
+                       shadow-lg
+                       shadow-red-500/20
+                       transition
+                       hover:scale-[1.03]
+                       hover:shadow-xl"
+            >
+
+                <i class="fas fa-trash-can"></i>
+
+                Delete Event
+
+            </button>
+
+        </form>
+
+    </div>
 
 
                             {{-- USER ALREADY REGISTERED --}}
