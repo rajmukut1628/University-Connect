@@ -391,7 +391,7 @@ Northern University Bangladesh
 
 ### Connect
 
-* GitHub: https://github.com/rajmukut791
+* GitHub: https://github.com/rajmukut1628
 * Facebook: https://facebook.com/rajmukut791
 * Email: [rajmukut791@gmail.com](mailto:rajmukut791@gmail.com)
 
