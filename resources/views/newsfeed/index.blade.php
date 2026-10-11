@@ -1026,7 +1026,7 @@
 
                                 <img
 
-                                    src="{{ asset('storage/' . $item['image']) }}"
+                                    src="{{ $item['type'] === 'event' ? route('secure.events.cover', $item['feedable_id']) : asset('storage/' . $item['image']) }}"
 
                                     alt="{{ $item['title'] }}"
 

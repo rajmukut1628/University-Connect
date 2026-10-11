@@ -237,10 +237,7 @@
                             <div class="relative">
 
                                 <img
-                                    src="{{ asset(
-                                        'storage/' .
-                                        $event->cover_image
-                                    ) }}"
+                                    src="{{ route('secure.events.cover', $event) }}"
 
                                     alt="{{ $event->title }}"
 

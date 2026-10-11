@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Donation;
 use App\Models\DonationManualPayment;
+use App\Models\Event;
 use App\Models\Message;
 use App\Models\ResumeAnalysis;
 use App\Models\User;
@@ -15,6 +16,32 @@ class SecureFileController extends Controller
     public function __construct(
         private EncryptedFileService $files
     ) {
+    }
+
+    public function eventCover(Event $event): Response
+    {
+        $user = auth()->user();
+        abort_unless($user && in_array($user->role, ['student', 'alumni', 'admin', 'super_admin'], true), 403);
+        abort_if(empty($event->cover_image), 404);
+
+        $path = $event->cover_image;
+        if ($this->files->isEncryptedPath($path)) {
+            abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($path), 404);
+            $bytes = $this->files->get($path);
+        } else {
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            abort_unless($disk->exists($path), 404);
+            $bytes = $disk->get($path);
+        }
+
+        $image = @getimagesizefromstring($bytes);
+        abort_unless($image && in_array($image['mime'], ['image/jpeg', 'image/png', 'image/webp'], true), 404);
+
+        return response($bytes, 200, [
+            'Content-Type' => $image['mime'],
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     /*

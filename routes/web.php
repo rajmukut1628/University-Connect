@@ -108,6 +108,11 @@ Route::get(
     [SecureFileController::class, 'donationImage']
 )->name('secure.donations.image');
 
+Route::get(
+    '/secure/events/{event}/cover',
+    [SecureFileController::class, 'eventCover']
+)->name('secure.events.cover');
+
 
 Route::get(
     '/secure/donation-payments/{payment}/screenshot',
