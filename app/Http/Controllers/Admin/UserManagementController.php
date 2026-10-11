@@ -588,7 +588,7 @@ class UserManagementController extends Controller
     /**
      * Block user.
      */
-    public function block(User $user)
+    public function block(Request $request, User $user)
     {
         $currentUser =
             auth()->user();
@@ -653,8 +653,15 @@ class UserManagementController extends Controller
         |--------------------------------------------------------------------------
         */
 
+        $validated = $request->validate([
+            'block_days' => ['required', 'integer', 'min:1', 'max:36500'],
+        ]);
+
+        $blockedUntil = now()->addDays((int) $validated['block_days']);
+
         $user->update([
             'is_blocked' => true,
+            'blocked_until' => $blockedUntil,
         ]);
 
 
@@ -678,7 +685,7 @@ class UserManagementController extends Controller
                 $user,
                 'account_blocked',
                 'Account Restricted',
-                'Your account has been blocked by the administration.',
+                'Your account has been blocked by the administration until ' . $blockedUntil->format('d M Y, H:i') . '.',
                 null,
                 'high',
                 null,
@@ -709,7 +716,7 @@ class UserManagementController extends Controller
 
         return back()->with(
             'success',
-            'User blocked successfully.'
+            'User blocked for ' . $validated['block_days'] . ' day(s). Automatic unblock: ' . $blockedUntil->format('d M Y, H:i') . '.'
         );
     }
 
@@ -777,6 +784,7 @@ class UserManagementController extends Controller
         $user->update([
             'is_blocked' =>
                 false,
+            'blocked_until' => null,
 
             'is_active' =>
                 true,

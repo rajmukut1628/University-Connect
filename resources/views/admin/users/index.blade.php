@@ -559,6 +559,12 @@
 
                                         </span>
 
+                                        @if($userItem->blocked_until)
+                                            <div class="mt-2 text-xs text-slate-400">
+                                                Until {{ $userItem->blocked_until->format('d M Y, H:i') }}
+                                            </div>
+                                        @endif
+
 
                                     @elseif(!$userItem->is_active)
 
@@ -663,7 +669,7 @@
 
                                                     <button
                                                         type="submit"
-                                                        onclick="return confirm('Block this user?')"
+                                                        onclick="const days = prompt('Block for how many days? (1–36500)', '7'); if (days === null) return false; if (!/^\d+$/.test(days) || Number(days) < 1 || Number(days) > 36500) { alert('Enter a whole number of days from 1 to 36500.'); return false; } this.form.elements.block_days.value = days; return confirm('Block this user for ' + days + ' day(s)?');"
                                                         class="px-4 py-2 rounded-xl bg-red-500/10 text-red-600 font-black hover:bg-red-500 hover:text-white transition"
                                                     >
 
@@ -672,6 +678,8 @@
                                                         Block
 
                                                     </button>
+
+                                                    <input type="hidden" name="block_days" value="">
 
                                                 </form>
 

@@ -38,6 +38,7 @@ class User extends Authenticatable
         'email_verified',
         'is_active',
         'is_blocked',
+        'blocked_until',
         'blocked_reason',
 
         'alumni_id',
@@ -84,6 +85,7 @@ class User extends Authenticatable
             'email_verified'             => 'boolean',
             'is_active'                  => 'boolean',
             'is_blocked'                 => 'boolean',
+            'blocked_until'              => 'datetime',
             'is_owner'                   => 'boolean',
             'alumni_since'               => 'datetime',
             'converted_from_student_at'  => 'datetime',
@@ -95,6 +97,18 @@ class User extends Authenticatable
     | Relationships
     |--------------------------------------------------------------------------
     */
+
+    public static function unblockExpiredAccounts(): int
+    {
+        return static::where('is_blocked', true)
+            ->whereNotNull('blocked_until')
+            ->where('blocked_until', '<=', now())
+            ->update([
+                'is_blocked' => false,
+                'blocked_until' => null,
+                'blocked_reason' => null,
+            ]);
+    }
 
     public function officialStudent()
     {
