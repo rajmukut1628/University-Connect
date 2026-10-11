@@ -459,62 +459,6 @@
                             gap-5">
 
 
-                    {{-- Verification --}}
-
-                    <a
-                        href="{{ $verificationRoute }}"
-                        class="uc-action
-                               bg-gradient-to-br
-                               from-emerald-500/20
-                               to-cyan-500/10
-                               p-5 group"
-                    >
-
-                        <div class="flex items-start
-                                    justify-between gap-4">
-
-                            <div class="h-12 w-12
-                                        rounded-2xl
-                                        bg-emerald-500/20
-                                        text-emerald-500
-                                        flex items-center
-                                        justify-center">
-
-                                <i class="fas fa-user-check text-xl"></i>
-
-                            </div>
-
-
-                            <i class="fas fa-arrow-right
-                                      text-slate-400
-                                      group-hover:translate-x-1
-                                      transition-transform">
-                            </i>
-
-                        </div>
-
-
-                        <h4 class="mt-5 text-lg font-black
-                                   text-slate-900
-                                   dark:text-white">
-
-                            Verification
-
-                        </h4>
-
-
-                        <p class="mt-2 text-sm
-                                  text-slate-500
-                                  dark:text-slate-400">
-
-                            Review and manage user verification.
-
-                        </p>
-
-                    </a>
-
-
-
                     {{-- User Management --}}
 
                     <a
