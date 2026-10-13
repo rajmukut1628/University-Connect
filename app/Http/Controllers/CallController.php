@@ -13,10 +13,13 @@ class CallController extends Controller
         if (!in_array(auth()->id(), [$call->caller_id, $call->receiver_id])) {
             abort(403, 'UNAUTHORIZED CALL ACCESS.');
         }
+        $otherId = (int) auth()->id() === (int) $call->caller_id ? $call->receiver_id : $call->caller_id;
+        abort_unless(auth()->user()->canMessage(User::findOrFail($otherId)), 403, 'An accepted mentorship is required to call.');
     }
 
     public function start(Request $request, User $user)
     {
+        abort_unless(auth()->user()->canMessage($user), 403, 'An accepted mentorship is required to call.');
         if (auth()->id() === $user->id) {
             abort(403, 'You cannot call yourself.');
         }

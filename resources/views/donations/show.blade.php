@@ -1,4 +1,6 @@
 <x-app-layout>
+    <div class="mx-auto max-w-7xl px-4"><x-post-lifecycle-status :post="$donation" /><x-post-actions :post="$donation" type="donation" :post-id="$donation->id" :owner-id="$donation->user_id" /></div>
+
 
     @php
         $user = auth()->user();
@@ -38,6 +40,10 @@
         $bkashNumber = '017XXXXXXXX';
         $nagadNumber = '018XXXXXXXX';
     @endphp
+    @if($isManagement || $isOwner)
+        <div class="mx-auto my-5 max-w-7xl px-4"><a href="{{ route('donations.management', $donation) }}" class="inline-block rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white">Donation Management / Transactions</a></div>
+    @endif
+
 
 
     {{-- ============================================================= --}}
@@ -173,9 +179,9 @@
                     </a>
 
 
-                    @if($isManagement)
+                    @if($isOwner)
 
-                        <a href="{{ route('donation-payments.pending') }}"
+                        <a href="{{ route('donations.management', $donation) }}"
                            class="inline-flex items-center
                                   justify-center gap-2
                                   rounded-2xl
@@ -631,7 +637,7 @@
         {{-- Only approved campaigns can receive donations --}}
         {{-- ========================================================= --}}
 
-        @if($status === 'approved')
+        @if($status === 'approved' && !$isOwner && !$isManagement && \App\Services\PostLifecycleService::accepting($donation))
 
             <div class="relative overflow-hidden
                         rounded-[30px]
@@ -1224,7 +1230,7 @@
                                           text-slate-500">
 
                                     Your payment will be added after
-                                    Admin verification.
+                                    campaign owner verification.
 
                                 </p>
 
@@ -1578,7 +1584,7 @@
                                           text-slate-500">
 
                                     Your payment will be added after
-                                    Admin verification.
+                                    campaign owner verification.
 
                                 </p>
 

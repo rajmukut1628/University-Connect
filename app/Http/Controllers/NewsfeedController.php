@@ -158,21 +158,29 @@ class NewsfeedController extends Controller
 
 
 
+        $interests = in_array(auth()->user()->role, ['student', 'alumni'], true) ? (auth()->user()->interests ?? []) : [];
+        $interestService = app(\App\Services\FeedInterestService::class);
+        $feedItems = $feedItems->map(function ($item) use ($interests, $interestService) {
+            $item['interest_score'] = $interestService->score($item, $interests);
+
+            return $item;
+        });
+
         $feedItems = $feedItems
 
-            ->sortByDesc('rank_score')
+            ->sortBy([['interest_score', 'desc'], ['rank_score', 'desc']])
 
             ->values();
 
 
 
-        return view(
+        return response()->view(
 
             'newsfeed.index',
 
             compact('feedItems')
 
-        );
+        )->header('Cache-Control', 'private, no-store, max-age=0');
 
     }
 
@@ -273,6 +281,7 @@ class NewsfeedController extends Controller
 
 
         $query = $modelClass::query();
+        if (Schema::hasColumn($table, 'archived_at')) $query->whereNull('archived_at');
 
 
 
@@ -1043,6 +1052,12 @@ class NewsfeedController extends Controller
 
                 ?? null,
 
+            'owner_id' => \App\Support\PostAccess::ownerId($type, $model),
+            'interest_text' => implode(' ', array_filter([
+                $model->getAttribute('category'), $model->getAttribute('type'),
+                $model->getAttribute('requirements'), $model->getAttribute('company_name'),
+            ])),
+
 
 
 
@@ -1701,23 +1716,7 @@ class NewsfeedController extends Controller
 
 
 
-            /*
-
-             * Current Event routes use events.index.
-
-             */
-
-
-
-            'event' =>
-
-                route(
-
-                    'events.index'
-
-                ),
-
-
+            'event' => route('events.show', $model),
 
             'donation' =>
 

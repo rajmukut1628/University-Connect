@@ -47,12 +47,12 @@ class ProfileStrengthService
             'linkedin' => [
                 'label' => 'LinkedIn Profile',
                 'score' => 10,
-                'completed' => !empty($user->linkedin) || !empty($user->linkedin_url),
+                'completed' => !empty($user->linkedin_url),
             ],
             'github' => [
                 'label' => 'GitHub / Portfolio',
                 'score' => 10,
-                'completed' => !empty($user->github) || !empty($user->github_url) || !empty($user->portfolio),
+                'completed' => !empty($user->github_url) || !empty($user->portfolio_url),
             ],
         ];
 

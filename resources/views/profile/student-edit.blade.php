@@ -69,17 +69,7 @@
                 <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-7 shadow-2xl">
                     <div class="text-center">
 
-                        @if($user->profile_image)
-                            <img
-                                src="{{ $user->getProfileImageUrl() }}"
-                                alt="{{ $user->name }}"
-                                class="mx-auto h-32 w-32 rounded-3xl object-cover border-4 border-white shadow-2xl"
-                            >
-                        @else
-                            <div class="mx-auto h-32 w-32 rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-white text-5xl font-black shadow-2xl">
-                                {{ strtoupper(substr($user->name, 0, 1)) }}
-                            </div>
-                        @endif
+                        <x-profile-photo :user="$user" />
 
                         <h3 class="mt-5 text-2xl font-black text-slate-900 dark:text-white">
                             {{ $user->name }}
@@ -125,7 +115,7 @@
                             </p>
 
                             <p class="mt-1 font-bold text-slate-900 dark:text-white">
-                                {{ $user->official_id ?: 'Not available' }}
+                                {{ $user->official_id ?: ($user->student_id ?: 'Not available') }}
                             </p>
                         </div>
 
@@ -194,11 +184,12 @@
 
                                 <input
                                     type="text"
-                                    name="name"
-                                    value="{{ old('name', $user->name) }}"
-                                    required
-                                    class="mt-2 w-full rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                                    value="{{ $user->name }}"
+                                    disabled
+                                    aria-label="Full Name (managed by admin)"
+                                    class="mt-2 w-full rounded-2xl border-slate-300 bg-slate-100 dark:border-white/10 dark:bg-slate-800 dark:text-slate-400"
                                 >
+                                <p class="mt-2 text-xs text-slate-500">Name, email and university ID can only be changed by an administrator.</p>
 
                                 @error('name')
                                     <p class="mt-1 text-sm text-red-500">{{ $message }}</p>

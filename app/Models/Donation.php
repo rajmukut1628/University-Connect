@@ -10,6 +10,7 @@ class Donation extends Model
     use HasFactory;
 
     protected $fillable = [
+        'archived_at',
         'user_id',
         'title',
         'category',
@@ -22,6 +23,7 @@ class Donation extends Model
     ];
 
     protected $casts = [
+        'archived_at' => 'datetime',
         'target_amount' => 'decimal:2',
         'collected_amount' => 'decimal:2',
         'deadline' => 'date',

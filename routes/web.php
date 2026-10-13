@@ -80,6 +80,11 @@ Route::get('/', function () {
 
 })->name('home');
 
+// Helpful information for commonly typed addresses; existing feature routes stay intact.
+foreach (array_keys(\App\Http\Controllers\PageInformationController::TOPICS) as $informationPath) {
+    Route::get('/'.$informationPath, \App\Http\Controllers\PageInformationController::class)->name('page.information.'.$informationPath);
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -769,6 +774,24 @@ Route::middleware(['role:student'])
         [NewsfeedController::class, 'index']
     )->name('newsfeed.index');
 
+    Route::get('/donations/{donation}/management', [DonationController::class, 'management'])->name('donations.management');
+
+    Route::patch('/newsfeed/interests', [\App\Http\Controllers\FeedInterestController::class, 'update'])
+        ->middleware('role:student,alumni')->name('newsfeed.interests.update');
+
+    Route::get('/posts/archive', [\App\Http\Controllers\PostLifecycleController::class, 'index'])->name('posts.archive');
+    Route::patch('/posts/extensions/{extension}/review', [\App\Http\Controllers\PostLifecycleController::class, 'review'])->middleware('role:admin,super_admin')->name('posts.extension.review');
+    Route::patch('/posts/{type}/{id}/archive', [\App\Http\Controllers\PostLifecycleController::class, 'archive'])->whereIn('type', ['job','event','donation'])->whereNumber('id')->name('posts.archive.store');
+    Route::get('/posts/{type}/{id}/extension', [\App\Http\Controllers\PostLifecycleController::class, 'form'])->whereIn('type', ['job','event','donation'])->whereNumber('id')->name('posts.extension.form');
+    Route::post('/posts/{type}/{id}/extension', [\App\Http\Controllers\PostLifecycleController::class, 'apply'])->whereIn('type', ['job','event','donation'])->whereNumber('id')->name('posts.extension.apply');
+
+    Route::get('/posts/{type}/{id}/edit', [\App\Http\Controllers\PostManagementController::class, 'edit'])
+        ->whereIn('type', ['job', 'event', 'donation'])->whereNumber('id')->name('posts.edit');
+    Route::patch('/posts/{type}/{id}', [\App\Http\Controllers\PostManagementController::class, 'update'])
+        ->whereIn('type', ['job', 'event', 'donation'])->whereNumber('id')->name('posts.update');
+    Route::delete('/posts/{type}/{id}', [\App\Http\Controllers\PostManagementController::class, 'destroy'])
+        ->whereIn('type', ['job', 'event', 'donation'])->whereNumber('id')->name('posts.destroy');
+
 
     Route::post(
         '/newsfeed/like',
@@ -911,7 +934,9 @@ Route::middleware(['role:student'])
     Route::get(
         '/donations/{donation}',
         [DonationController::class, 'show']
-    )->name('donations.show');
+    )->name('donations.show')->missing(function (\Illuminate\Http\Request $request) {
+        return redirect()->route($request->user() ? 'newsfeed.index' : 'login')->with('success', 'This post is no longer available. It may have been deleted.');
+    });
 
 
     Route::patch(
@@ -949,23 +974,23 @@ Route::middleware(['role:student'])
 */
 
 Route::middleware([
-    'role:admin,super_admin',
+    'auth',
 ])->group(function () {
 
     Route::get(
-        '/admin/donation-payments/pending',
+        '/donation-payments/pending',
         [DonationManualPaymentController::class, 'pending']
     )->name('donation-payments.pending');
 
 
     Route::patch(
-        '/admin/donation-payments/{payment}/approve',
+        '/donation-payments/{payment}/approve',
         [DonationManualPaymentController::class, 'approve']
     )->name('donation-payments.approve');
 
 
     Route::patch(
-        '/admin/donation-payments/{payment}/reject',
+        '/donation-payments/{payment}/reject',
         [DonationManualPaymentController::class, 'reject']
     )->name('donation-payments.reject');
 
@@ -1103,7 +1128,9 @@ Route::middleware([
 Route::get(
     '/jobs/{job}',
     [JobController::class, 'show']
-)->name('jobs.show');
+)->name('jobs.show')->missing(function (\Illuminate\Http\Request $request) {
+        return redirect()->route($request->user() ? 'newsfeed.index' : 'login')->with('success', 'This post is no longer available. It may have been deleted.');
+    });
 
 
 /*
@@ -1224,10 +1251,6 @@ Route::middleware(['role:alumni'])
                 '/events/create',
                 [EventController::class, 'create']
             )->name('events.create');
-            Route::get(
-    '/events/{event}',
-    [EventController::class, 'show']
-)->name('events.show');
 
 
             Route::post(
@@ -1237,6 +1260,13 @@ Route::middleware(['role:alumni'])
 
         });
 
+
+    Route::get('/events/{event}/participants', [EventController::class, 'participants'])->name('events.participants');
+    Route::delete('/events/{event}/participants/{participant}', [EventController::class, 'cancelRegisteredParticipant'])->whereNumber('participant')->name('events.participants.cancel');
+    Route::delete('/events/{event}/participation', [EventController::class, 'cancelParticipation'])->middleware('role:student,alumni')->name('events.participation.cancel');
+    Route::get('/events/{event}', [EventController::class, 'show'])->name('events.show')->missing(function (\Illuminate\Http\Request $request) {
+        return redirect()->route($request->user() ? 'newsfeed.index' : 'login')->with('success', 'This post is no longer available. It may have been deleted.');
+    });
 
     Route::middleware(['role:student,alumni'])
         ->group(function () {
@@ -1401,3 +1431,5 @@ Route::middleware([
 if (file_exists(__DIR__ . '/auth.php')) {
     require __DIR__ . '/auth.php';
 }
+
+Route::post('/payments/stripe/webhook', \App\Http\Controllers\DonationWebhookController::class)->name('donations.stripe.webhook');

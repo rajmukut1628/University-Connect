@@ -1,0 +1,1 @@
+@include('information.show', ['statusCode' => '405', 'title' => 'Open this action from its page', 'message' => 'This address is used by a button or form and cannot be opened directly. Return to the website and use the relevant page button.', 'destination' => null])

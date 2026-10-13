@@ -210,7 +210,7 @@ class VerifiedUserController extends Controller
         });
 
         return redirect()
-            ->route('superadmin.verified-users.index')
+            ->route((auth()->user()->role === 'super_admin' ? 'superadmin' : 'admin') . '.verified-users.index')
             ->with(
                 'success',
                 'Verified user and login account created successfully.'
@@ -388,7 +388,7 @@ class VerifiedUserController extends Controller
         });
 
         return redirect()
-            ->route('superadmin.verified-users.index')
+            ->route((auth()->user()->role === 'super_admin' ? 'superadmin' : 'admin') . '.verified-users.index')
             ->with(
                 'success',
                 'Verified user updated successfully.'
@@ -771,8 +771,7 @@ class VerifiedUserController extends Controller
 
         if (empty($previewRows)) {
             return redirect()
-                ->route(
-                    'superadmin.verified-users.index'
+                ->route((auth()->user()->role === 'super_admin' ? 'superadmin' : 'admin') . '.verified-users.index'
                 )
                 ->withErrors([
                     'bulk_text' => 'Preview session expired.',
@@ -883,8 +882,7 @@ class VerifiedUserController extends Controller
         );
 
         return redirect()
-            ->route(
-                'superadmin.verified-users.index'
+            ->route((auth()->user()->role === 'super_admin' ? 'superadmin' : 'admin') . '.verified-users.index'
             )
             ->with(
                 'success',

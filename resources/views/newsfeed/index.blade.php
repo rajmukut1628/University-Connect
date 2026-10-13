@@ -564,6 +564,23 @@
 
             <div class="uc-feed-shell mt-5 mb-7">
 
+                @if(in_array(auth()->user()->role, ['student', 'alumni'], true))
+                    <details class="mb-5 rounded-2xl border border-white/10 bg-slate-900 p-5 text-white" @if(empty(auth()->user()->interests) || $errors->has('interests') || $errors->has('interests.*')) open @endif>
+                        <summary class="cursor-pointer font-bold">{{ empty(auth()->user()->interests) ? 'Choose your interests' : 'Update Interests' }}</summary>
+                        <p class="my-3 text-sm text-slate-400">Related posts appear first. You can still browse all posts and change your interests here.</p>
+                        <form method="POST" action="{{ route('newsfeed.interests.update') }}">
+                            @csrf
+                            @method('PATCH')
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                @foreach(\App\Services\FeedInterestService::OPTIONS as $key => $label)
+                                    <label class="flex items-center gap-3"><input type="checkbox" name="interests[]" value="{{ $key }}" @checked(in_array($key, (array) old('interests', auth()->user()->interests ?? []), true))> {{ $label }}</label>
+                                @endforeach
+                            </div>
+                            <button type="submit" class="mt-4 rounded-xl bg-indigo-600 px-5 py-2 font-bold">Save Interests</button>
+                        </form>
+                    </details>
+                @endif
+
                 <div class="flex flex-wrap items-center gap-2.5">
 
                     <button type="button" class="uc-filter-btn is-active" data-feed-filter="all">
@@ -1659,6 +1676,8 @@
 
 
                             </a>
+
+
 
 
 
@@ -3113,6 +3132,14 @@
         }
 
     );
+
+    // Re-fetch cards when returning to a previously opened feed.
+    window.addEventListener('pageshow', function (event) {
+        const navigation = performance.getEntriesByType('navigation')[0];
+        if (event.persisted || (navigation && navigation.type === 'back_forward')) {
+            window.location.reload();
+        }
+    });
 
 </script>
 

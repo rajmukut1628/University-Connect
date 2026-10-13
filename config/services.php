@@ -41,6 +41,7 @@ return [
         'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
     ],
    'stripe' => [
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     'key' => env('STRIPE_KEY'),
     'secret' => env('STRIPE_SECRET'),
     'currency' => env('STRIPE_CURRENCY', 'bdt'),

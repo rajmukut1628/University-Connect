@@ -34,15 +34,7 @@
             <div class="space-y-8">
                 <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-7 shadow-2xl">
                     <div class="text-center">
-                        @if($profileUser->profile_image)
-                            <img src="{{ $profileUser->getProfileImageUrl() }}"
-                                 alt="{{ $profileUser->name }}"
-                                 class="mx-auto h-32 w-32 rounded-3xl object-cover border-4 border-white shadow-2xl">
-                        @else
-                            <div class="mx-auto h-32 w-32 rounded-3xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-white text-5xl font-black shadow-2xl">
-                                {{ strtoupper(substr($profileUser->name, 0, 1)) }}
-                            </div>
-                        @endif
+                        <x-profile-photo :user="$profileUser" />
 
                         <h3 class="mt-5 text-3xl font-black text-slate-900 dark:text-white">
                             {{ $profileUser->name }}
@@ -152,10 +144,7 @@
                         Back
                     </a>
 
-                    <a href="{{ route('messages.index', ['user' => $profileUser->id]) }}"
-                       class="px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-black shadow-xl hover:scale-105 transition">
-                        Send Message
-                    </a>
+                    <x-message-link :user="$profileUser" />
                 </div>
 
             </div>

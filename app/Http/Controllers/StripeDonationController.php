@@ -21,7 +21,7 @@ class StripeDonationController extends Controller
         Donation $donation
     ) {
         abort_unless(
-            $donation->status === 'approved',
+            $donation->status === 'approved' && \App\Services\PostLifecycleService::accepting($donation),
             403
         );
 
@@ -170,44 +170,7 @@ class StripeDonationController extends Controller
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | IMPORTANT
-        |--------------------------------------------------------------------------
-        |
-        | This preserves your current Stripe flow.
-        |
-        | For production, Stripe webhook + stored session/payment ID should
-        | be used for fully idempotent accounting.
-        |
-        */
-
-        $amount =
-            ((float) $session->amount_total)
-            / 100;
-
-
-        DB::transaction(
-            function () use (
-                $donation,
-                $amount
-            ) {
-                $lockedDonation =
-                    Donation::query()
-                        ->whereKey(
-                            $donation->id
-                        )
-                        ->lockForUpdate()
-                        ->firstOrFail();
-
-
-                $lockedDonation->increment(
-                    'collected_amount',
-                    $amount
-                );
-            }
-        );
-
+        app(\App\Services\DonationCardPaymentService::class)->record($session, $donation->id, (int) $request->user()->id);
 
         return redirect()
             ->route(

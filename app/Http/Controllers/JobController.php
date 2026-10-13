@@ -26,6 +26,7 @@ class JobController extends Controller
         $user = $request->user();
 
         $query = JobPosting::with('postedBy');
+        if (\Illuminate\Support\Facades\Schema::hasColumn('job_postings', 'archived_at')) $query->whereNull('archived_at');
 
         /*
         |--------------------------------------------------------------------------
@@ -106,7 +107,8 @@ class JobController extends Controller
 
         $jobs = $query
             ->latest()
-            ->paginate(12)
+            ->orderByDesc('id')
+            ->paginate(6)
             ->withQueryString();
 
 

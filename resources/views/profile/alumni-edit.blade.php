@@ -86,24 +86,14 @@
                 <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-7 shadow-2xl">
                     <div class="text-center">
 
-                        @if($user->profile_image)
-                            <img
-                                src="{{ $user->getProfileImageUrl() }}"
-                                alt="{{ $user->name }}"
-                                class="mx-auto h-32 w-32 rounded-3xl object-cover border-4 border-white shadow-2xl"
-                            >
-                        @else
-                            <div class="mx-auto h-32 w-32 rounded-3xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-5xl font-black shadow-2xl">
-                                {{ strtoupper(substr($user->name, 0, 1)) }}
-                            </div>
-                        @endif
+                        <x-profile-photo :user="$user" />
 
                         <h3 class="mt-5 text-2xl font-black text-slate-900 dark:text-white">
                             {{ $user->name }}
                         </h3>
 
                         <p class="mt-1 font-bold text-purple-500">
-                            {{ $user->current_designation ?: 'Alumni Professional' }}
+                            {{ $user->current_designation ?: 'Position not added' }}
                         </p>
 
                         <p class="mt-2 text-sm text-slate-500">
@@ -133,7 +123,7 @@
                             </p>
 
                             <p class="mt-1 font-black text-purple-500">
-                                {{ $user->alumni_id ?: 'Not available' }}
+                                {{ $user->official_id ?: ($user->alumni_id ?: 'Not available') }}
                             </p>
                         </div>
 
@@ -163,7 +153,7 @@
                             </p>
 
                             <p class="mt-1 font-bold text-slate-900 dark:text-white">
-                                {{ $user->work_experience_years ?: 'Not calculated yet' }}
+                                {{ $user->work_experience_years ?? 'Not added yet' }}
                             </p>
                         </div>
                     </div>
@@ -232,11 +222,12 @@
 
                                 <input
                                     type="text"
-                                    name="name"
-                                    required
-                                    value="{{ old('name', $user->name) }}"
-                                    class="mt-2 w-full rounded-2xl border-slate-300 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                                    value="{{ $user->name }}"
+                                    disabled
+                                    aria-label="Full Name (managed by admin)"
+                                    class="mt-2 w-full rounded-2xl border-slate-300 bg-slate-100 dark:border-white/10 dark:bg-slate-800 dark:text-slate-400"
                                 >
+                                <p class="mt-2 text-xs text-slate-500">Name, email and university ID can only be changed by an administrator.</p>
                             </div>
 
                             <div>
@@ -445,6 +436,8 @@
                         </div>
                     </div>
 
+                    @include('profile.partials.professional-summary')
+
                     <div class="flex flex-col sm:flex-row gap-4">
                         <button
                             type="submit"
@@ -489,7 +482,7 @@
                             </p>
 
                             <p class="mt-1 text-xl font-black text-emerald-300">
-                                {{ $user->work_experience_years ?: 'Not added yet' }}
+                                {{ $user->work_experience_years ?? 'Not added yet' }}
                             </p>
                         </div>
                     </div>

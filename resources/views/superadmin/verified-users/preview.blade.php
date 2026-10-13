@@ -49,7 +49,7 @@
             </div>
 
             <div class="p-6 flex flex-col md:flex-row gap-4">
-                <form method="POST" action="{{ route('superadmin.verified-users.bulk-confirm') }}">
+                <form method="POST" action="{{ route((auth()->user()->role === 'super_admin' ? 'superadmin' : 'admin') . '.verified-users.bulk-confirm') }}">
                     @csrf
                     <button type="submit"
                             class="px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-cyan-600 text-white font-black shadow-xl">
@@ -57,7 +57,7 @@
                     </button>
                 </form>
 
-                <a href="{{ route('superadmin.verified-users.index') }}"
+                <a href="{{ route((auth()->user()->role === 'super_admin' ? 'superadmin' : 'admin') . '.verified-users.index') }}"
                    class="px-8 py-3 rounded-2xl bg-slate-700 text-white font-black">
                     Cancel
                 </a>

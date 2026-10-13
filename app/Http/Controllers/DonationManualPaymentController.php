@@ -24,7 +24,7 @@ class DonationManualPaymentController extends Controller
         Donation $donation
     ) {
         abort_unless(
-            $donation->status === 'approved',
+            $donation->status === 'approved' && \App\Services\PostLifecycleService::accepting($donation),
             403
         );
 
@@ -162,7 +162,8 @@ class DonationManualPaymentController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        NotificationService::management(
+        NotificationService::personal(
+            $donation->user_id,
             'donation_payment_pending',
             'Donation Payment Verification',
             $user->name .
@@ -176,7 +177,7 @@ class DonationManualPaymentController extends Controller
                 '. Transaction ID: ' .
                 $payment->transaction_id,
             route(
-                'donation-payments.pending'
+                'donations.management', $donation
             ),
             'high',
             $payment,
@@ -186,7 +187,7 @@ class DonationManualPaymentController extends Controller
 
         return back()->with(
             'success',
-            'Payment submitted successfully. It will be added to the campaign after Admin verification.'
+            'Payment submitted successfully. It will be added to the campaign after campaign owner verification.'
         );
     }
 
@@ -199,13 +200,14 @@ class DonationManualPaymentController extends Controller
 
     public function pending()
     {
-        $this->ensureManagement();
+        abort_unless(Auth::user()->is_active && !Auth::user()->is_blocked, 403);
 
         $payments = DonationManualPayment::with([
                 'user',
                 'donation',
             ])
             ->where('status', 'pending')
+            ->whereHas('donation', fn ($q) => $q->where('user_id', Auth::id()))
             ->oldest()
             ->paginate(20);
 
@@ -225,7 +227,7 @@ class DonationManualPaymentController extends Controller
     public function approve(
         DonationManualPayment $payment
     ) {
-        $this->ensureManagement();
+        $this->ensureOwner($payment);
 
         if ($payment->status !== 'pending') {
             return back()->with(
@@ -275,6 +277,12 @@ class DonationManualPaymentController extends Controller
             ]);
 
 
+            \App\Models\DonationContribution::create([
+                'donation_id' => $donation->id, 'user_id' => $lockedPayment->user_id,
+                'amount' => $lockedPayment->amount, 'donor_name' => $lockedPayment->user?->name,
+                'donor_email' => $lockedPayment->user?->email, 'payment_method' => strtolower($lockedPayment->payment_method),
+                'message' => $lockedPayment->note, 'status' => 'confirmed', 'is_anonymous' => false,
+            ]);
             $donation->increment(
                 'collected_amount',
                 (float) $lockedPayment->amount
@@ -326,7 +334,7 @@ class DonationManualPaymentController extends Controller
         Request $request,
         DonationManualPayment $payment
     ) {
-        $this->ensureManagement();
+        $this->ensureOwner($payment);
 
 
         if ($payment->status !== 'pending') {
@@ -346,19 +354,11 @@ class DonationManualPaymentController extends Controller
         ]);
 
 
-        $payment->update([
-            'status' =>
-                'rejected',
-
-            'reviewed_by' =>
-                Auth::id(),
-
-            'reviewed_at' =>
-                now(),
-
-            'rejection_reason' =>
-                $validated['rejection_reason'],
-        ]);
+        DB::transaction(function () use ($payment, $validated) {
+            $locked = DonationManualPayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            abort_unless($locked->status === 'pending', 409, 'This payment has already been processed.');
+            $locked->update(['status' => 'rejected', 'reviewed_by' => Auth::id(), 'reviewed_at' => now(), 'rejection_reason' => $validated['rejection_reason']]);
+        });
 
 
         if ($payment->user) {
@@ -392,19 +392,9 @@ class DonationManualPaymentController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    private function ensureManagement(): void
+    private function ensureOwner(DonationManualPayment $payment): void
     {
-        abort_unless(
-            Auth::check() &&
-            in_array(
-                Auth::user()->role,
-                [
-                    'admin',
-                    'super_admin',
-                ],
-                true
-            ),
-            403
-        );
+        abort_unless(Auth::check() && Auth::user()->is_active && !Auth::user()->is_blocked
+            && (int) $payment->donation?->user_id === (int) Auth::id(), 403);
     }
 }

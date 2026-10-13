@@ -1,0 +1,41 @@
+@props(['type', 'postId', 'ownerId', 'post' => null])
+@if(auth()->check() && ((int) auth()->id() === (int) $ownerId || in_array(auth()->user()->role, ['admin', 'super_admin'], true)))
+    @php
+        $managedPost = $post ?? (\App\Services\PostLifecycleService::TYPES[$type])::findOrFail($postId);
+        $isOwner = (int) auth()->id() === (int) $ownerId;
+        $pendingExtension = \App\Models\PostExtensionRequest::where('post_type', $type)->where('post_id', $postId)->where('status', 'pending')->first();
+    @endphp
+    <div class="flex flex-wrap items-center gap-3 py-3">
+        <a href="{{ route('posts.edit', ['type' => $type, 'id' => $postId]) }}" class="rounded-xl bg-indigo-600 px-4 py-2 font-bold text-white">Edit / Update</a>
+        @if($isOwner && !$pendingExtension)
+        <a href="{{ route('posts.extension.form', ['type'=>$type,'id'=>$postId]) }}" class="rounded-xl bg-amber-600 px-4 py-2 font-bold text-white">Apply Date Extension</a>
+        @elseif($isOwner)
+            <span class="rounded-xl bg-amber-500/10 px-4 py-2 text-amber-300">Extension Pending</span>
+        @endif
+        <details class="rounded-xl border border-white/10 p-3"><summary class="cursor-pointer font-bold">Manage Post</summary><div class="mt-3 flex flex-wrap gap-3">
+        @if(!$managedPost->archived_at)
+        <form method="POST" action="{{ route('posts.archive.store', ['type'=>$type,'id'=>$postId]) }}" onsubmit="return confirm('Move this post to archive?')">@csrf @method('PATCH')<button type="submit" class="rounded-xl bg-slate-700 px-4 py-2 font-bold text-white">Move to Archive</button></form>
+        @else
+            <span class="rounded-xl bg-slate-700 px-4 py-2 text-white">Already Archived</span>
+        @endif
+        <form method="POST" action="{{ route('posts.destroy', ['type' => $type, 'id' => $postId]) }}" onsubmit="return confirm('Delete this post permanently?')">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 font-bold text-white">Delete</button>
+        </form>
+        </div></details>
+    </div>
+    @if(in_array(auth()->user()->role, ['admin', 'super_admin'], true) && $pendingExtension)
+        <section class="my-4 rounded-xl border border-amber-500/30 p-4 space-y-3">
+            <h2 class="font-bold">Pending Date Extension Request</h2>
+            <p class="whitespace-pre-line">{{ $pendingExtension->reason }}</p>
+            @foreach($pendingExtension->dates as $field => $value)<p>{{ ucwords(str_replace('_', ' ', $field)) }}: {{ $value }}</p>@endforeach
+            <form method="POST" action="{{ route('posts.extension.review', $pendingExtension) }}" class="flex flex-wrap gap-3">
+                @csrf @method('PATCH')
+                <input name="review_note" maxlength="3000" placeholder="Review note (required to reject)" class="bg-slate-900 rounded-lg p-2" />
+                <button name="decision" value="approved" class="bg-green-700 rounded-lg px-4 py-2 text-white">Approve & Publish</button>
+                <button name="decision" value="rejected" class="bg-red-700 rounded-lg px-4 py-2 text-white">Reject</button>
+            </form>
+        </section>
+    @endif
+@endif

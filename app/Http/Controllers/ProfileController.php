@@ -132,6 +132,20 @@ class ProfileController extends Controller
             ],
         ];
 
+        if ($user->isStudent() || $user->isAlumni()) {
+            // University-managed identity cannot be changed through self-service requests.
+            unset($rules['name']);
+            foreach (['name', 'email', 'official_id', 'student_id', 'alumni_id'] as $field) {
+                if (!$request->exists($field)) continue;
+                $value = $request->input($field);
+                if ((!is_scalar($value) && $value !== null) || (string) $value !== (string) $user->$field) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        $field => 'Only an administrator can change your name, email or university ID.',
+                    ]);
+                }
+            }
+        }
+
         /*
         |--------------------------------------------------------------------------
         | Student Specific Fields
@@ -234,6 +248,14 @@ class ProfileController extends Controller
             ]);
         }
 
+        if ($user->isAlumni()) {
+            foreach (['current_company', 'current_designation', 'current_job_type', 'previous_company', 'previous_designation'] as $field) {
+                $rules[$field] = ['nullable', 'string', 'max:255'];
+            }
+            $rules['work_experience_years'] = ['nullable', 'string', 'max:100'];
+            $rules['previous_job_details'] = ['nullable', 'string', 'max:3000'];
+        }
+
         $validated = $request->validate($rules);
 
         /*
@@ -248,12 +270,6 @@ class ProfileController extends Controller
     $encryptedFiles = app(
         EncryptedFileService::class
     );
-
-    if ($user->profile_image) {
-        $encryptedFiles->delete(
-            $user->profile_image
-        );
-    }
 
     /*
      * Encrypt and save new profile image
@@ -271,8 +287,15 @@ class ProfileController extends Controller
         | Save User Profile
         |--------------------------------------------------------------------------
         */
-        $user->fill($validated);
-        $user->save();
+        $oldImage = $user->profile_image;
+        try {
+            $user->fill($validated);
+            $user->save();
+        } catch (\Throwable $error) {
+            if (isset($validated['profile_image'])) app(EncryptedFileService::class)->delete($validated['profile_image']);
+            throw $error;
+        }
+        if (isset($validated['profile_image']) && $oldImage) app(EncryptedFileService::class)->delete($oldImage);
 
         return Redirect::route('profile.edit')
             ->with(

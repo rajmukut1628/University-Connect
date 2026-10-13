@@ -278,7 +278,7 @@
 
             {{-- Mentorship --}}
 
-            <a href="{{ url('/mentorship-requests') }}"
+            <a href="{{ route('mentors.index') }}"
                class="group
                       rounded-[24px]
                       border border-white/10
@@ -1504,45 +1504,6 @@
                               text-white">
 
                         Update Profile
-
-                    </p>
-
-                </a>
-
-
-
-                {{-- Resume Analyzer --}}
-
-                <a href="{{ route('resume-analyzer.index') }}"
-                   class="group
-                          rounded-2xl
-                          border border-white/10
-                          bg-white/5
-                          p-5
-                          text-center
-                          transition
-                          hover:-translate-y-1
-                          hover:border-cyan-400/30
-                          hover:bg-cyan-500/10">
-
-                    <div class="mx-auto
-                                h-11 w-11
-                                rounded-xl
-                                bg-cyan-500/15
-                                flex items-center
-                                justify-center
-                                text-cyan-400">
-
-                        <i class="fas fa-file-lines"></i>
-
-                    </div>
-
-                    <p class="mt-3
-                              text-sm
-                              font-black
-                              text-white">
-
-                        AI Resume Analyzer
 
                     </p>
 

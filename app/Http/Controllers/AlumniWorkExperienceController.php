@@ -420,10 +420,10 @@ class AlumniWorkExperienceController extends Controller
                         ? Carbon::parse(
                             $experience->end_date
                         )->startOfMonth()
-                        : now()->startOfMonth()
+                        : null
                 );
 
-            if ($end->lt($start)) {
+            if (!$end || $end->lt($start)) {
                 continue;
             }
 

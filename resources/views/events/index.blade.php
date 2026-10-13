@@ -146,7 +146,7 @@
                                   font-black
                                   text-amber-300">
 
-                            {{ $stats['pending_requests'] ?? 0 }}
+                            {{ $stats['approved_participants'] ?? 0 }}
                             Pending
 
                         </p>
@@ -267,7 +267,7 @@
                                   text-slate-400
                                   max-w-2xl">
 
-                            Review pending registrations and manage
+                            View registered participants and manage
                             university event participation from one place.
 
                         </p>
@@ -281,7 +281,7 @@
                                 gap-3">
 
                         <a
-                            href="{{ route('event.participants.pending') }}"
+                            href="#event-list"
                             class="inline-flex
                                    items-center
                                    justify-center
@@ -300,7 +300,7 @@
 
                             <i class="fas fa-clipboard-check"></i>
 
-                            Event Requests
+                            Event Participants
 
                         </a>
 
@@ -500,7 +500,7 @@
                                       font-bold
                                       text-slate-500">
 
-                                Pending Requests
+                                Registered Participants
 
                             </p>
 
@@ -509,7 +509,7 @@
                                        font-black
                                        text-amber-500">
 
-                                {{ $stats['pending_requests'] ?? 0 }}
+                                {{ $stats['approved_participants'] ?? 0 }}
 
                             </h3>
 
@@ -732,7 +732,7 @@
         {{-- EVENT CARDS --}}
         {{-- ========================================================= --}}
 
-        <div class="grid
+        <div id="event-list" class="grid
                     grid-cols-1
                     md:grid-cols-2
                     xl:grid-cols-3
@@ -752,7 +752,7 @@
                         $event->capacity &&
                         $participants >= $event->capacity;
 
-                    $isOpen =
+                    $isOpen = \App\Services\PostLifecycleService::accepting($event) &&
                         in_array(
                             $event->status,
                             [
@@ -836,7 +836,7 @@
                                              text-xs
                                              font-black">
 
-                                    Available
+                                    {{ !$isOpen ? 'Registration Closed' : ($isFull ? 'Participation Full' : 'Available') }}
 
                                 </span>
 
@@ -845,6 +845,10 @@
                         </div>
 
 
+
+                        @if($isOpen && $isFull)
+                            <p class="mt-4 rounded-xl bg-amber-500/10 p-3 font-bold text-amber-300">Participation Full — {{ $participants }} / {{ $event->capacity }} approved participants. All places are filled.</p>
+                        @endif
 
                         {{-- Title --}}
 
@@ -935,6 +939,7 @@
                             </p>
 
 
+                            <a href="{{ route('events.show', $event) }}" class="mb-3 block w-full rounded-xl bg-indigo-600 px-4 py-3 text-center font-bold text-white">{{ $isAdminPanel ? 'View / Manage Event' : 'View Details' }}</a>
                             @if($isAdminPanel)
 
                                 <p>
@@ -1063,6 +1068,8 @@
 
                             {{-- USER ALREADY REGISTERED --}}
 
+                            @elseif((int) $event->created_by === (int) auth()->id())
+                                <p class="rounded-xl bg-indigo-500/10 p-3 text-center font-bold text-indigo-300">Your Event</p>
                             @elseif($isRegistered)
 
                                 @php
@@ -1083,7 +1090,7 @@
 
                                         <i class="fas fa-clock mr-2"></i>
 
-                                        Registration Pending
+                                        <form method="POST" action="{{ route('events.register', $event) }}">@csrf<button type="submit" class="font-bold">Complete Registration</button></form>
 
                                     </div>
 
@@ -1137,6 +1144,8 @@
                                     </div>
 
                                 @endif
+                                <x-event-cancel-participation :event="$event" :status="$myStatus" />
+
 
 
 
@@ -1170,7 +1179,7 @@
                                             text-center
                                             font-black">
 
-                                    Event Full
+                                    Participation Full
 
                                 </div>
 
@@ -1317,6 +1326,8 @@
             @endforelse
 
         </div>
+        <div class="mt-6">{{ $events->links() }}</div>
+
 
     </div>
 

@@ -40,6 +40,7 @@ class User extends Authenticatable
         'is_blocked',
         'blocked_until',
         'blocked_reason',
+        'interests',
 
         'alumni_id',
         'student_id',
@@ -86,6 +87,7 @@ class User extends Authenticatable
             'is_active'                  => 'boolean',
             'is_blocked'                 => 'boolean',
             'blocked_until'              => 'datetime',
+            'interests'                  => 'array',
             'is_owner'                   => 'boolean',
             'alumni_since'               => 'datetime',
             'converted_from_student_at'  => 'datetime',
@@ -97,6 +99,25 @@ class User extends Authenticatable
     | Relationships
     |--------------------------------------------------------------------------
     */
+
+    public function canMessage(User $otherUser): bool
+    {
+        if (!$this->is_active || $this->is_blocked || !$otherUser->is_active || $otherUser->is_blocked) {
+            return false;
+        }
+        if ($this->role === 'student' && $otherUser->role === 'alumni') {
+            $studentId = $this->id;
+            $mentorId = $otherUser->id;
+        } elseif ($this->role === 'alumni' && $otherUser->role === 'student') {
+            $studentId = $otherUser->id;
+            $mentorId = $this->id;
+        } else {
+            return false;
+        }
+
+        return Mentorship::where('student_id', $studentId)->where('mentor_id', $mentorId)
+            ->where('status', 'accepted')->exists();
+    }
 
     public static function unblockExpiredAccounts(): int
     {
@@ -354,12 +375,6 @@ public function currentWorkExperience()
      * Old public image.
      * Keep working until migration.
      */
-    return asset(
-        'storage/' .
-        ltrim(
-            $this->profile_image,
-            '/'
-        )
-    );
+    return route('secure.profile.image', $this);
 }
 }

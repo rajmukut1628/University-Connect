@@ -31,8 +31,10 @@ class EventController extends Controller
                 'status',
                 $publicStatuses
             )
+            ->when(\Illuminate\Support\Facades\Schema::hasColumn('events', 'archived_at'), fn ($q) => $q->whereNull('archived_at'))
             ->latest('event_date')
-            ->get();
+            ->orderByDesc('id')
+            ->paginate(6)->withQueryString();
 
 
         $registeredEvents =
@@ -351,14 +353,51 @@ class EventController extends Controller
     }
 
 
+    public function participants(Event $event)
+    {
+        abort_unless(\App\Support\PostAccess::canManage(auth()->user(), 'event', $event), 403);
+        $participants = $event->participants()->with('user')->latest()->paginate(25);
+        return response()->view('events.participants', compact('event', 'participants'))->header('Cache-Control', 'private, no-store');
+    }
+
+    public function cancelRegisteredParticipant(Event $event, int $participant)
+    {
+        abort_unless(\App\Support\PostAccess::canManage(auth()->user(), 'event', $event), 403);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($event, $participant) {
+            Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+            $registration = $event->participants()->whereKey($participant)->lockForUpdate()->firstOrFail();
+            abort_unless(in_array($registration->status, ['pending', 'approved'], true), 409);
+            NotificationService::personal($registration->user_id, 'event_participation_cancelled', 'Event Participation Cancelled',
+                'Your participation in "'.$event->title.'" was cancelled by '.auth()->user()->name.'.',
+                route('events.show', $event), 'medium', $event, auth()->user());
+            $registration->delete();
+        });
+        return redirect()->route('events.participants', $event)->with('success', 'Participation cancelled and the user has been notified.');
+    }
+
+    public function cancelParticipation(Event $event)
+    {
+        $user = auth()->user();
+        abort_unless($user && in_array($user->role, ['student', 'alumni'], true) && $user->is_active && !$user->is_blocked, 403);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($event, $user) {
+            $participant = EventParticipant::where('event_id', $event->id)->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
+            abort_unless(in_array($participant->status, ['pending', 'approved'], true), 409, 'This registration cannot be cancelled.');
+            $participant->delete();
+        });
+        return back()->with('success', 'Your event participation has been cancelled.');
+    }
+
     public function register(Event $event)
     {
+        abort_unless(\App\Services\PostLifecycleService::accepting($event), 403, 'This event is archived or expired.');
+
         if (!auth()->check()) {
             return redirect()
                 ->route('login');
         }
 
         $user = auth()->user();
+        abort_if((int) $event->created_by === (int) $user->id, 403, 'Owners cannot register for their own event.');
 
         if (
             !in_array(
@@ -395,63 +434,22 @@ class EventController extends Controller
         }
 
 
-        $approvedCount =
-            $event
-                ->participants()
-                ->where(
-                    'status',
-                    'approved'
-                )
-                ->count();
-
-
-        if (
-            $event->capacity &&
-            $approvedCount >=
-            $event->capacity
-        ) {
-            return back()->withErrors([
-                'event' =>
-                    'This event is already full.',
-            ]);
-        }
-
-
-        $existing =
-            EventParticipant::where(
-                'event_id',
-                $event->id
-            )
-                ->where(
-                    'user_id',
-                    $user->id
-                )
-                ->first();
-
-
-        if ($existing) {
-            return back()->withErrors([
-                'event' =>
-                    'You have already submitted a registration request. Current status: ' .
-                    ucfirst(
-                        $existing->status
-                    ),
-            ]);
-        }
-
-
-        $participant =
-            EventParticipant::create([
-                'event_id' =>
-                    $event->id,
-
-                'user_id' =>
-                    $user->id,
-
-                'status' =>
-                    'pending',
-            ]);
-
+        abort_unless($user->is_active && !$user->is_blocked, 403);
+        $participant = \Illuminate\Support\Facades\DB::transaction(function () use ($event, $user) {
+            $lockedEvent = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+            abort_unless(\App\Services\PostLifecycleService::accepting($lockedEvent) && in_array($lockedEvent->status, ['active', 'published', 'approved'], true), 403);
+            $existing = EventParticipant::where('event_id', $event->id)->where('user_id', $user->id)->first();
+            if ($existing && $existing->status === 'approved') {
+                throw \Illuminate\Validation\ValidationException::withMessages(['event'=>'You are already registered for this event.']);
+            }
+            $count = $lockedEvent->participants()->where('status', 'approved')->count();
+            if ($lockedEvent->capacity && $count >= $lockedEvent->capacity) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['event'=>'This event is already full.']);
+            }
+            $participant = $existing ?? new EventParticipant(['event_id'=>$event->id, 'user_id'=>$user->id]);
+            $participant->fill(['status'=>'approved'])->save();
+            return $participant;
+        });
 
         /*
         |--------------------------------------------------------------------------
@@ -462,10 +460,10 @@ class EventController extends Controller
         NotificationService::personal(
             $user,
             'event_registration_submitted',
-            'Event Registration Submitted',
-            'Your registration request for "' .
+            'Event Registration Confirmed',
+            'Your registration for "' .
                 $event->title .
-                '" has been submitted.',
+                '" is confirmed.',
             route('events.index'),
             'medium',
             $participant,
@@ -483,7 +481,7 @@ class EventController extends Controller
             'event_registration',
             'New Event Registration',
             $user->name .
-                ' requested to join "' .
+                ' registered for "' .
                 $event->title .
                 '".',
             null,
@@ -495,7 +493,7 @@ class EventController extends Controller
 
         return back()->with(
             'success',
-            'Registration request submitted. Waiting for admin approval.'
+            'Registration confirmed. You are registered for this event.'
         );
     }
 
@@ -1097,6 +1095,9 @@ public function show(Event $event)
 {
     $user = auth()->user();
 
+    abort_unless(in_array($event->status, ['active', 'published', 'approved'], true)
+        || \App\Support\PostAccess::canManage($user, 'event', $event), 404);
+
     abort_unless(
         $user &&
         in_array(
@@ -1121,8 +1122,9 @@ public function show(Event $event)
 
     $event->load([
         'creator',
-        'participants.user',
+        'participants',
     ]);
+
 
 
     /*
@@ -1169,10 +1171,10 @@ public function show(Event $event)
 
     $isFull =
         $event->capacity &&
-        $participantCount >= $event->capacity;
+        $approvedCount >= $event->capacity;
 
 
-    $isOpen = in_array(
+    $isOpen = \App\Services\PostLifecycleService::accepting($event) && in_array(
         $event->status,
         [
             'active',

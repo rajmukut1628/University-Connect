@@ -62,7 +62,7 @@ class MessageController extends Controller
                 ->unique()
                 ->values();
 
-        // Existing conversations are also limited to accepted mentorships.
+        // Keep old conversations readable; only accepted connections can send.
         $partnerIds = Message::query()
             ->where(function ($query) use ($authUser) {
                 $query->where('sender_id', $authUser->id)
@@ -78,7 +78,6 @@ class MessageController extends Controller
                     ? (int) $message->recipient_id
                     : (int) $message->sender_id;
             })
-            ->filter(fn ($id) => $approvedUserIds->contains((int) $id))
             ->unique()
             ->values();
 
@@ -292,7 +291,13 @@ class MessageController extends Controller
 
 
 
-        $this->ensureAcceptedMentorship($authUser, $user);
+        $canMessage = $authUser->canMessage($user);
+        $hasHistory = Message::where(function ($query) use ($authUser, $user) {
+            $query->where('sender_id', $authUser->id)->where('recipient_id', $user->id)->where('deleted_by_sender', false);
+        })->orWhere(function ($query) use ($authUser, $user) {
+            $query->where('sender_id', $user->id)->where('recipient_id', $authUser->id)->where('deleted_by_receiver', false);
+        })->exists();
+        abort_unless($canMessage || $hasHistory, 403, 'An accepted mentorship is required to start a conversation.');
 
         /*
 
@@ -510,7 +515,8 @@ class MessageController extends Controller
 
                 'user',
 
-                'messages'
+                'messages',
+                'canMessage'
 
             )
 
@@ -850,6 +856,14 @@ class MessageController extends Controller
 
             ) {
 
+                // Lock the accepted relationship until the new message is saved.
+                $studentId = $authUser->role === 'student' ? $authUser->id : $user->id;
+                $mentorId = $authUser->role === 'alumni' ? $authUser->id : $user->id;
+                abort_unless(Mentorship::where('student_id', $studentId)->where('mentor_id', $mentorId)
+                    ->where('status', 'accepted')->lockForUpdate()->first(), 403,
+                    'An accepted mentorship is required to send messages.');
+                $this->ensureAcceptedMentorship($authUser, $user);
+
 
 
                 return Message::create([
@@ -999,6 +1013,7 @@ class MessageController extends Controller
     ) {
 
         $authUser = auth()->user();
+        $this->ensureAcceptedMentorship($authUser, User::findOrFail($message->recipient_id));
 
 
 
@@ -1273,24 +1288,8 @@ class MessageController extends Controller
      */
     private function ensureAcceptedMentorship(User $authUser, User $otherUser): void
     {
-        $isApprovedConnection = false;
-
-        if ($authUser->role === 'student' && $otherUser->role === 'alumni') {
-            $isApprovedConnection = Mentorship::query()
-                ->where('student_id', $authUser->id)
-                ->where('mentor_id', $otherUser->id)
-                ->where('status', 'accepted')
-                ->exists();
-        } elseif ($authUser->role === 'alumni' && $otherUser->role === 'student') {
-            $isApprovedConnection = Mentorship::query()
-                ->where('mentor_id', $authUser->id)
-                ->where('student_id', $otherUser->id)
-                ->where('status', 'accepted')
-                ->exists();
-        }
-
         abort_unless(
-            $isApprovedConnection,
+            $authUser->canMessage($otherUser),
             403,
             'Messaging is available only between approved mentorship connections.'
         );

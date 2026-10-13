@@ -1,3 +1,78 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Light-theme adjustments are scoped to the app and never match dark mode. */
+html:not(.dark) .uc-app-shell {
+    background: linear-gradient(135deg, #f5f7ff, #f8fafc 55%, #fdf4ff) !important;
+    color: #172033;
+}
+html:not(.dark) .uc-orb { opacity: .12; }
+html:not(.dark) :is(.uc-topbar, .uc-dropdown, .uc-more-dropdown, .uc-profile-pill, .premium-glass) {
+    background: #ffffff !important;
+    border-color: #dbe3f0 !important;
+    box-shadow: 0 12px 35px rgb(30 41 59 / .09) !important;
+    color: #172033 !important;
+}
+html:not(.dark) :is(.uc-brand-title, .uc-nav, .uc-dropdown-link, .uc-more-link, .uc-icon-btn) {
+    color: #334155;
+}
+html:not(.dark) .uc-brand-subtitle { color: #64748b; }
+html:not(.dark) :is(.uc-nav, .uc-icon-btn) { background: #f1f5f9; border-color: #dbe3f0; }
+html:not(.dark) :is(.uc-nav, .uc-more-link, .uc-dropdown-link, .uc-icon-btn):hover {
+    background: #eef2ff; color: #4338ca;
+}
+html:not(.dark) :is(.uc-active, .uc-more-link-active) {
+    background: linear-gradient(110deg, #6d28d9, #4338ca) !important;
+    border-color: #6d28d9 !important;
+    color: #fff !important;
+}
+html:not(.dark) .uc-role-badge { background: #e0f2fe; border-color: #bae6fd; color: #075985; }
+html:not(.dark) :is(.uc-topbar, .uc-dropdown, .uc-more-dropdown, .uc-profile-pill, aside.premium-glass) :is(.text-white, .text-slate-200, .text-slate-300):not(.uc-profile-avatar):not(.uc-logo-box):not(.uc-active):not(.uc-profile-avatar *):not(.uc-logo-box *):not(.uc-active *) {
+    color: #1e293b !important;
+}
+html:not(.dark) :is(.uc-profile-avatar, .uc-logo-box, .uc-active) { color: #fff !important; }
+html:not(.dark) :is(.uc-profile-avatar, .uc-logo-box, .uc-active) * { color: inherit !important; }
+html:not(.dark) :is(.uc-card, .uc-action, .uc-post, .uc-comment-box) {
+    background: #fff !important;
+    border-color: #dbe3f0 !important;
+    box-shadow: 0 8px 28px rgb(30 41 59 / .07) !important;
+}
+html:not(.dark) .uc-main-area :is(.bg-slate-950, .bg-slate-900, .bg-slate-800, .bg-gray-900, .bg-gray-800):not(.uc-page-hero *) {
+    background-color: #f1f5f9 !important;
+}
+html:not(.dark) .uc-main-area :is(div, section)[class*="from-slate-9"]:not(.uc-page-hero *),
+html:not(.dark) .uc-main-area :is(div, section)[class*="from-indigo-9"]:not(.uc-page-hero *),
+html:not(.dark) .uc-main-area :is(div, section)[class*="from-purple-9"]:not(.uc-page-hero *) {
+    background: linear-gradient(135deg, #eef2ff, #f8fafc) !important;
+    border-color: #dbe3f0 !important;
+}
+html:not(.dark) .uc-main-area .text-white:not(.uc-page-hero *) { color: #172033 !important; }
+html:not(.dark) .uc-main-area :is(.text-slate-100, .text-slate-200, .text-slate-300, .text-gray-200, .text-gray-300):not(.uc-page-hero *) {
+    color: #475569 !important;
+}
+html:not(.dark) .uc-main-area :is(.text-slate-400, .text-gray-400):not(.uc-page-hero *) { color: #64748b !important; }
+html:not(.dark) .uc-main-area :is(.text-cyan-300, .text-cyan-400):not(.uc-page-hero *) { color: #0e7490 !important; }
+html:not(.dark) .uc-main-area :is(.text-purple-300, .text-purple-400):not(.uc-page-hero *) { color: #7e22ce !important; }
+html:not(.dark) .uc-main-area :is(.text-blue-300, .text-blue-400, .text-indigo-300, .text-indigo-400):not(.uc-page-hero *) { color: #4338ca !important; }
+html:not(.dark) .uc-main-area :is(.text-emerald-300, .text-emerald-400, .text-green-300, .text-green-400):not(.uc-page-hero *) { color: #047857 !important; }
+html:not(.dark) .uc-main-area :is(.text-amber-300, .text-amber-400, .text-yellow-300, .text-yellow-400):not(.uc-page-hero *) { color: #92400e !important; }
+html:not(.dark) .uc-main-area :is(.text-pink-300, .text-pink-400, .text-rose-300, .text-rose-400):not(.uc-page-hero *) { color: #be185d !important; }
+html:not(.dark) .uc-main-area :is(.border-white\/10, .border-white\/20, .border-white\/5):not(.uc-page-hero *) { border-color: #dbe3f0 !important; }
+html:not(.dark) .uc-main-area :is(input:not([type=checkbox]):not([type=radio]), textarea, select) {
+    background-color: #fff !important; color: #172033 !important; border-color: #cbd5e1 !important;
+}
+html:not(.dark) .uc-main-area :is(input, textarea)::placeholder { color: #64748b !important; opacity: 1; }
+html:not(.dark) .uc-main-area :is(input, textarea, select):disabled { background-color: #e9eef5 !important; color: #475569 !important; }
+html:not(.dark) :is(.uc-meta-pill, .uc-filter-btn) { background: #eef2ff !important; border-color: #dbe3f0 !important; color: #475569; }
+html:not(.dark) .uc-filter-btn.is-active { background: #4338ca !important; color: #fff !important; }
+html:not(.dark) :is(.uc-action-btn, .uc-load-more) { color: #475569; }
+html:not(.dark) .uc-action-btn:hover { background: #eef2ff; color: #4338ca; }
+html:not(.dark) .uc-post-image { background: #f1f5f9; }
+/* Keep white labels on saturated controls and identity avatars. */
+html:not(.dark) .uc-main-area :is(button, a)[class*="bg-gradient-to"],
+html:not(.dark) .uc-main-area :is(button, a)[class*="bg-gradient-to"] *,
+html:not(.dark) .uc-main-area :is(.uc-avatar, .bg-indigo-600, .bg-purple-600, .bg-blue-600, .bg-cyan-600, .bg-red-600, .bg-red-700, .bg-green-600, .bg-green-700, .bg-emerald-600, .bg-amber-600),
+html:not(.dark) .uc-main-area :is(.uc-avatar, .bg-indigo-600, .bg-purple-600, .bg-blue-600, .bg-cyan-600, .bg-red-600, .bg-red-700, .bg-green-600, .bg-green-700, .bg-emerald-600, .bg-amber-600) * {
+    color: #fff !important;
+}

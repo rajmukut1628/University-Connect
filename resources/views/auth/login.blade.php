@@ -159,7 +159,7 @@
 
 
                     {{-- Password --}}
-                    <div>
+                    <div x-data="{ showPassword: false }">
 
                         <label
                             for="password"
@@ -171,15 +171,24 @@
                         </label>
 
 
+                        <div class="relative mt-2">
                         <input
                             id="password"
                             type="password"
+                            :type="showPassword ? 'text' : 'password'"
                             name="password"
                             required
                             autocomplete="current-password"
-                            class="mt-2 w-full rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white placeholder-slate-400 focus:border-cyan-400 focus:ring-cyan-400"
+                            class="w-full rounded-2xl border border-white/10 bg-white/10 pl-4 pr-14 py-3 text-white placeholder-slate-400 focus:border-cyan-400 focus:ring-cyan-400"
                             placeholder="Enter password"
                         >
+                        <button type="button" @click="showPassword = !showPassword"
+                            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                            :aria-pressed="showPassword" aria-label="Show password" aria-pressed="false" aria-controls="password"
+                            class="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-2xl text-slate-300 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
+                            <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true"></i>
+                        </button>
+                        </div>
 
 
                         <x-input-error

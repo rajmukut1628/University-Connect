@@ -270,6 +270,7 @@
                         method="POST"
                         action="{{ route('calls.start', $user) }}"
                     >
+                    <fieldset @disabled(!$canMessage)>
 
                         @csrf
 
@@ -298,6 +299,7 @@
                             <i class="fas fa-phone text-sm"></i>
                         </button>
 
+                    </fieldset>
                     </form>
 
 
@@ -307,6 +309,7 @@
                         method="POST"
                         action="{{ route('calls.start', $user) }}"
                     >
+                    <fieldset @disabled(!$canMessage)>
 
                         @csrf
 
@@ -335,6 +338,7 @@
                             <i class="fas fa-video text-sm"></i>
                         </button>
 
+                    </fieldset>
                     </form>
 
                 </div>
@@ -724,8 +728,7 @@
                                     >
 
                                         {{-- Edit --}}
-
-                                        @if($message->content)
+                                        @if($canMessage && $message->content)
 
                                             <button
                                                 type="button"
@@ -754,7 +757,6 @@
                                                 ></i>
 
                                             </button>
-
                                         @endif
 
 
@@ -826,6 +828,7 @@
                                     "
                                 >
 
+                                    <fieldset @disabled(!$canMessage)>
                                     @csrf
                                     @method('PATCH')
 
@@ -894,7 +897,8 @@
 
                                     </div>
 
-                                </form>
+                                </fieldset>
+                    </form>
 
                             @endif
 
@@ -1038,12 +1042,14 @@
                 "
             >
 
+                <p class="mb-3 text-sm text-amber-300" @if($canMessage) hidden @endif>Messaging is locked. An accepted mentorship is required to send or edit messages. Previous messages remain readable.</p>
                 <form
                     method="POST"
                     action="{{ route('messages.store', $user) }}"
                     enctype="multipart/form-data"
                     id="messageForm"
                 >
+                    <fieldset @disabled(!$canMessage)>
 
                     @csrf
 
@@ -1151,6 +1157,7 @@
 
                     </div>
 
+                </fieldset>
                 </form>
 
             </div>

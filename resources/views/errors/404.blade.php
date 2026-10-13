@@ -1,0 +1,1 @@
+@include('information.show', ['statusCode' => '404', 'title' => 'This page could not be found', 'message' => 'The address may be incorrect or the page may have moved. Use the buttons below to return to University Connect.', 'destination' => null])

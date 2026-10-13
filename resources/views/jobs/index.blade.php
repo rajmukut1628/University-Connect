@@ -222,7 +222,7 @@
                 </button>
             </form>
         </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
             @forelse($jobs as $job)
                 <div class="uc-card p-4">
                     <div class="relative z-10 flex flex-col h-full">

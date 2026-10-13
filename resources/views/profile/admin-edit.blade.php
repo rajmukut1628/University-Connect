@@ -68,17 +68,7 @@
 
                 <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-7 shadow-2xl text-center">
 
-                    @if($user->profile_image)
-                        <img
-                            src="{{ $user->getProfileImageUrl() }}"
-                            alt="{{ $user->name }}"
-                            class="mx-auto h-32 w-32 rounded-3xl object-cover border-4 border-white shadow-xl"
-                        >
-                    @else
-                        <div class="mx-auto h-32 w-32 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-5xl font-black">
-                            {{ strtoupper(substr($user->name, 0, 1)) }}
-                        </div>
-                    @endif
+                    <x-profile-photo :user="$user" />
 
                     <h3 class="mt-5 text-2xl font-black text-slate-900 dark:text-white">
                         {{ $user->name }}

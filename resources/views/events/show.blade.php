@@ -1,4 +1,16 @@
 <x-app-layout>
+    <div class="mx-auto max-w-7xl px-4"><x-post-lifecycle-status :post="$event" /><x-post-actions :post="$event" type="event" :post-id="$event->id" :owner-id="$event->created_by" /></div>
+    @if($isOpen && $isFull)
+        <div class="mx-auto my-4 max-w-7xl rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 font-bold text-amber-300">Participation Full — {{ $approvedCount }} / {{ $event->capacity }} approved participants. All places are filled; new registrations are closed.</div>
+    @endif
+
+    @if($isAdminPanel || (int) $event->created_by === (int) auth()->id())
+        <div class="mx-auto my-5 max-w-7xl">
+            <a href="{{ route('events.participants', $event) }}" class="inline-block rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white">Registered Participants ({{ $participantCount }})</a>
+        </div>
+    @endif
+
+
 
     <div class="min-h-screen">
 
@@ -760,7 +772,7 @@
                             auth()->user()->role,
                             ['student', 'alumni'],
                             true
-                        )
+                        ) && (int) $event->created_by !== (int) auth()->id()
                     )
 
                         <div
@@ -784,6 +796,7 @@
 
 
                                 @if($myRegistration)
+                                    <x-event-cancel-participation :event="$event" :status="$myRegistration->status" />
 
 
                                     @if(
@@ -802,7 +815,7 @@
 
                                             <i class="fas fa-clock mr-2"></i>
 
-                                            Registration Pending
+                                            <form method="POST" action="{{ route('events.register', $event) }}">@csrf<button type="submit" class="font-bold">Complete Registration</button></form>
 
                                         </div>
 
@@ -878,7 +891,7 @@
                                                text-red-300"
                                     >
 
-                                        Event Full
+                                        Participation Full
 
                                     </div>
 

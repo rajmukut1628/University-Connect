@@ -63,27 +63,27 @@
         <div class="rounded-[1.5rem] bg-white/10 border border-white/10 p-5 shadow-xl">
             <p class="text-slate-300 font-bold">Total Campaigns</p>
             <h3 class="mt-4 text-4xl font-black text-emerald-400">
-                {{ $donations->count() }}
+                {{ $stats['total'] }}
             </h3>
         </div>
 
         <div class="rounded-[1.5rem] bg-white/10 border border-white/10 p-5 shadow-xl">
             <p class="text-slate-300 font-bold">Approved</p>
             <h3 class="mt-4 text-4xl font-black text-cyan-400">
-                {{ $donations->where('status', 'approved')->count() }}
+                {{ $stats['approved'] }}
             </h3>
         </div>
 
         <div class="rounded-[1.5rem] bg-white/10 border border-white/10 p-5 shadow-xl">
             <p class="text-slate-300 font-bold">Pending Review</p>
             <h3 class="mt-4 text-4xl font-black text-amber-400">
-                {{ $donations->where('status', 'pending')->count() }}
+                {{ $stats['pending'] }}
             </h3>
         </div>
     </div>
 @endif
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
             @forelse($donations as $donation)
                 <div class="donation-card p-4 ">
                     <div class="relative z-10">
@@ -190,5 +190,6 @@
                 </div>
             @endforelse
         </div>
+        <div class="mt-6">{{ $donations->links() }}</div>
     </div>
 </x-app-layout>

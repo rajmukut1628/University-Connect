@@ -108,7 +108,7 @@
                     Short or messy input allowed. Example: role = stu, dept = computer science, batch = 56.
                 </p>
 
-                <form method="POST" action="{{ route('superadmin.verified-users.store') }}" class="mt-6 space-y-4">
+                <form method="POST" action="{{ route((auth()->user()->role === 'super_admin' ? 'superadmin' : 'admin') . '.verified-users.store') }}" class="mt-6 space-y-4">
                     @csrf
 
                     <div>
@@ -186,7 +186,7 @@
                     </p>
 
                     <form method="POST"
-      action="{{ route('superadmin.verified-users.bulk-preview') }}"
+      action="{{ route((auth()->user()->role === 'super_admin' ? 'superadmin' : 'admin') . '.verified-users.bulk-preview') }}"
       enctype="multipart/form-data">
     @csrf
 
@@ -216,7 +216,7 @@
 
                 {{-- Search --}}
                 <div class="ai-card p-6">
-                    <form method="GET" action="{{ route('superadmin.verified-users.index') }}"
+                    <form method="GET" action="{{ route((auth()->user()->role === 'super_admin' ? 'superadmin' : 'admin') . '.verified-users.index') }}"
                           class="grid grid-cols-1 md:grid-cols-4 gap-3">
                         <input class="ai-input md:col-span-2" name="search" value="{{ request('search') }}" placeholder="Search name, email, ID, dept">
 
@@ -280,7 +280,7 @@
                                         </div>
                                     </div>
 
-                                    <form method="POST" action="{{ route('superadmin.verified-users.destroy', $verifiedUser) }}"
+                                    <form method="POST" action="{{ route((auth()->user()->role === 'super_admin' ? 'superadmin' : 'admin') . '.verified-users.destroy', $verifiedUser) }}"
                                           onsubmit="return confirm('Delete this verified user?')">
                                         @csrf
                                         @method('DELETE')

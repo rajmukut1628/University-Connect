@@ -46,28 +46,18 @@
                 <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-7 shadow-2xl">
                     <div class="text-center">
 
-                        @if($profileUser->profile_image)
-                            <img
-                                src="{{ $profileUser->getProfileImageUrl() }}"
-                                alt="{{ $profileUser->name }}"
-                                class="mx-auto h-32 w-32 rounded-3xl object-cover border-4 border-white shadow-2xl"
-                            >
-                        @else
-                            <div class="mx-auto h-32 w-32 rounded-3xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-5xl font-black shadow-2xl">
-                                {{ strtoupper(substr($profileUser->name, 0, 1)) }}
-                            </div>
-                        @endif
+                        <x-profile-photo :user="$profileUser" />
 
                         <h3 class="mt-5 text-3xl font-black text-slate-900 dark:text-white">
                             {{ $profileUser->name }}
                         </h3>
 
                         <p class="text-purple-500 font-bold mt-1">
-                            {{ $profileUser->current_designation ?: 'Alumni Professional' }}
+                            {{ $profileUser->current_designation ?: 'Position not added' }}
                         </p>
 
                         <p class="text-slate-500 mt-2">
-                            {{ $profileUser->current_company ?: 'Professional Alumni' }}
+                            {{ $profileUser->current_company ?: 'Organization not added' }}
                         </p>
                     </div>
                 </div>
@@ -107,7 +97,7 @@
                             </p>
 
                             <p class="mt-1 font-black text-emerald-300">
-                                {{ $profileUser->work_experience_years ?: 'Not specified' }}
+                                {{ $profileUser->work_experience_years ?? 'Not specified' }}
                             </p>
                         </div>
 
@@ -227,7 +217,7 @@
                             </h3>
                         </div>
 
-                        @if($profileUser->work_experience_years)
+                        @if(filled($profileUser->work_experience_years))
                             <div class="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 px-5 py-3">
                                 <p class="text-xs text-slate-500">
                                     Total Experience
@@ -469,12 +459,7 @@
                     </a>
 
                     @if(auth()->id() !== $profileUser->id)
-                        <a
-                            href="{{ route('messages.index', ['user' => $profileUser->id]) }}"
-                            class="px-8 py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black shadow-xl hover:scale-105 transition"
-                        >
-                            Send Message
-                        </a>
+                        <x-message-link :user="$profileUser" />
                     @endif
 
                 </div>

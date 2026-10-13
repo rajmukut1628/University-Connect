@@ -63,11 +63,22 @@ class SecureFileController extends Controller
             404
         );
 
-        return $this->serve(
-            $user->profile_image,
-            'image/jpeg',
-            'profile-image'
-        );
+        $path = $user->profile_image;
+        if ($this->files->isEncryptedPath($path)) {
+            abort_unless(\Illuminate\Support\Facades\Storage::disk('local')->exists($path), 404);
+            $bytes = $this->files->get($path);
+        } else {
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            abort_unless($disk->exists($path), 404);
+            $bytes = $disk->get($path);
+        }
+        $image = @getimagesizefromstring($bytes);
+        abort_unless($image && in_array($image['mime'], ['image/jpeg', 'image/png', 'image/webp'], true), 404);
+        return response($bytes, 200, [
+            'Content-Type' => $image['mime'],
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     /*
@@ -116,14 +127,7 @@ class SecureFileController extends Controller
             (int) $payment->user_id ===
                 (int) $user->id
             ||
-            in_array(
-                $user->role,
-                [
-                    'admin',
-                    'super_admin',
-                ],
-                true
-            );
+(int) $payment->donation?->user_id === (int) $user->id;
 
         abort_unless(
             $allowed,

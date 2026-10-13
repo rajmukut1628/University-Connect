@@ -1,0 +1,1 @@
+@include('information.show', ['statusCode' => '403', 'title' => 'This page needs permission', 'message' => 'Your account does not have permission to open this page. Return to your dashboard or contact your university administrator if you need assistance.', 'destination' => null])

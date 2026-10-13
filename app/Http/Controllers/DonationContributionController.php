@@ -14,6 +14,8 @@ class DonationContributionController extends Controller
         Request $request,
         Donation $donation
     ) {
+        abort_unless($donation->status === 'approved' && \App\Services\PostLifecycleService::accepting($donation), 403);
+        abort_unless((int) $donation->user_id === (int) auth()->id(), 403, 'Only the campaign owner may record a received contribution.');
         $validated = $request->validate([
             'amount' => [
                 'required',
@@ -30,7 +32,7 @@ class DonationContributionController extends Controller
             'payment_method' => [
                 'required',
                 'string',
-                'in:cash,bkash,nagad,rocket,bank,other',
+                'in:cash,rocket,bank,other',
             ],
 
             'is_anonymous' => [

@@ -10,6 +10,7 @@ class JobPosting extends Model
     use HasFactory;
 
     protected $fillable = [
+        'archived_at',
         'title',
         'description',
 
@@ -39,6 +40,7 @@ class JobPosting extends Model
 
 
     protected $casts = [
+        'archived_at' => 'datetime',
         'deadline' => 'datetime',
         'positions_available' => 'integer',
     ];

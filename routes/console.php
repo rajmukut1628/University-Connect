@@ -9,3 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::call(fn () => \App\Models\User::unblockExpiredAccounts())->everyMinute();
+
+Schedule::call(fn () => \App\Services\PostLifecycleService::archiveExpired())->everyMinute();

@@ -1,15 +1,28 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"
+<html class="dark" lang="{{ str_replace('_', '-', app()->getLocale()) }}"
       x-data="{
           mobileMenuOpen: false,
           profileMenuOpen: false,
           moreMenuOpen: false,
-          darkMode: localStorage.getItem('darkMode') === 'true'
+          darkMode: document.documentElement.classList.contains('dark')
       }"
-      x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))"
+      x-init="$watch('darkMode', val => { document.documentElement.style.colorScheme = val ? 'dark' : 'light'; try { localStorage.setItem('darkMode', String(val)); } catch (error) {} })"
       :class="{ 'dark': darkMode }">
 
 <head>
+    <script>
+        // Apply the saved theme before styles or page content can render.
+        (() => {
+            let dark = true;
+            try { dark = localStorage.getItem('darkMode') !== 'false'; } catch (error) {}
+            document.documentElement.classList.toggle('dark', dark);
+            document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        })();
+    </script>
+    <style>
+        html { background: #f8fafc; }
+        html.dark { background: #020617; color-scheme: dark; }
+    </style>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -1559,6 +1572,11 @@
             return $item['active'];
         });
 
+    if ($user) {
+        $archiveNav = $makeNavItem('Archive / Requests', 'fa-box-archive', route('posts.archive'), request()->routeIs('posts.archive', 'posts.extension.*'));
+        $primaryNavItems[] = $archiveNav;
+        $mobileNavItems[] = $archiveNav;
+    }
 @endphp
 
 <div class="uc-app-shell relative overflow-hidden">
@@ -2900,7 +2918,7 @@
 
             @isset($header)
 
-                <div class="mb-8">
+                <div class="mb-8 uc-page-hero">
 
                     {{ $header }}
 

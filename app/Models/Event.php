@@ -10,6 +10,7 @@ class Event extends Model
     use HasFactory;
 
     protected $fillable = [
+        'archived_at',
         'title',
         'description',
         'type',
@@ -26,6 +27,7 @@ class Event extends Model
     ];
 
     protected $casts = [
+        'archived_at' => 'datetime',
         'event_date' => 'datetime',
         'start_date' => 'date',
         'end_date' => 'date',

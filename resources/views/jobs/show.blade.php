@@ -42,6 +42,8 @@
         </div>
 
     </x-slot>
+    <div class="mx-auto max-w-7xl px-4"><x-post-lifecycle-status :post="$job" /><x-post-actions :post="$job" type="job" :post-id="$job->id" :owner-id="$job->posted_by" /></div>
+
 
 
     <style>
@@ -283,11 +285,13 @@
             {{-- CONTACT / APPLICATION INFORMATION --}}
             {{-- ========================================================= --}}
 
-            @if(
-                $job->contact_email ||
-                $job->contact_phone ||
-                $job->application_url
-            )
+            @php
+                $canApply = in_array(auth()->user()->role, ['student', 'alumni'], true)
+                    && (int) $job->posted_by !== (int) auth()->id()
+                    && $job->status === 'approved'
+                    && \App\Services\PostLifecycleService::accepting($job);
+            @endphp
+            @if($job->contact_email || $job->contact_phone || $job->application_url)
 
                 <div class="uc-card p-8">
 
@@ -303,14 +307,14 @@
 
                         <h3 class="mt-2 text-3xl font-black text-slate-900 dark:text-white">
 
-                            How to Apply
+                            {{ $canApply ? 'How to Apply' : 'Contact Details' }}
 
                         </h3>
 
 
                         <p class="mt-3 text-slate-500 dark:text-slate-400">
 
-                            Use the contact information provided by the employer to apply or ask about this opportunity.
+                            {{ $canApply ? 'Use the contact information provided by the employer to apply or ask about this opportunity.' : 'Contact information supplied by the job poster.' }}
 
                         </p>
 
@@ -420,7 +424,7 @@
 
                                     <i class="fas fa-arrow-up-right-from-square mr-2"></i>
 
-                                    Apply on Company Website
+                                    {{ $canApply ? 'Apply on Company Website' : 'Company Website' }}
 
                                 </a>
 
