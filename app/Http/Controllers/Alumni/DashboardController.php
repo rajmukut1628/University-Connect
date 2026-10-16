@@ -87,7 +87,7 @@ class DashboardController extends Controller
             );
 
             $mentorshipRequestsCount =
-                (clone $mentorshipQuery)->count();
+                \App\Services\DashboardActivityService::connections($user)->count();
 
             if (Schema::hasColumn('mentorships', 'status')) {
                 $pendingMentorshipsCount =
@@ -216,43 +216,7 @@ class DashboardController extends Controller
 
     private function getUnreadMessages(int $userId): int
     {
-        if (!Schema::hasTable('messages')) {
-            return 0;
-        }
-
-        if (Schema::hasColumn('messages', 'recipient_id')) {
-            return Message::where(
-                'recipient_id',
-                $userId
-            )
-                ->when(
-                    Schema::hasColumn(
-                        'messages',
-                        'read_at'
-                    ),
-                    fn ($query) =>
-                        $query->whereNull('read_at')
-                )
-                ->count();
-        }
-
-        if (Schema::hasColumn('messages', 'to_user_id')) {
-            return Message::where(
-                'to_user_id',
-                $userId
-            )
-                ->when(
-                    Schema::hasColumn(
-                        'messages',
-                        'read_at'
-                    ),
-                    fn ($query) =>
-                        $query->whereNull('read_at')
-                )
-                ->count();
-        }
-
-        return 0;
+        return \App\Services\DashboardActivityService::unread(auth()->user())->count();
     }
 
 

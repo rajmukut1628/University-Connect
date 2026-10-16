@@ -166,20 +166,7 @@ class DashboardController extends Controller
 
     private function getTotalEvents(): int
     {
-        if (!Schema::hasTable('events')) {
-            return 0;
-        }
-
-        $query = Event::query();
-
-        if (Schema::hasColumn('events', 'status')) {
-            $query->whereIn(
-                'status',
-                ['approved', 'active', 'published']
-            );
-        }
-
-        return $query->count();
+        return \App\Services\DashboardActivityService::events(auth()->user())->count();
     }
 
 
@@ -238,25 +225,7 @@ class DashboardController extends Controller
 
     private function getMentorshipRequests(int $userId): int
     {
-        if (!Schema::hasTable('mentorships')) {
-            return 0;
-        }
-
-        if (Schema::hasColumn('mentorships', 'student_id')) {
-            return Mentorship::where(
-                'student_id',
-                $userId
-            )->count();
-        }
-
-        if (Schema::hasColumn('mentorships', 'user_id')) {
-            return Mentorship::where(
-                'user_id',
-                $userId
-            )->count();
-        }
-
-        return 0;
+        return \App\Services\DashboardActivityService::connections(auth()->user())->count();
     }
 
 
@@ -268,53 +237,7 @@ class DashboardController extends Controller
 
     private function getUnreadMessages(int $userId): int
     {
-        if (!Schema::hasTable('messages')) {
-            return 0;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Current message schema
-        |--------------------------------------------------------------------------
-        */
-
-        if (Schema::hasColumn('messages', 'recipient_id')) {
-            $query = Message::where(
-                'recipient_id',
-                $userId
-            );
-
-            if (Schema::hasColumn('messages', 'read_at')) {
-                $query->whereNull('read_at');
-            } elseif (Schema::hasColumn('messages', 'is_read')) {
-                $query->where('is_read', false);
-            }
-
-            return $query->count();
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Compatibility with older schema
-        |--------------------------------------------------------------------------
-        */
-
-        if (Schema::hasColumn('messages', 'to_user_id')) {
-            $query = Message::where(
-                'to_user_id',
-                $userId
-            );
-
-            if (Schema::hasColumn('messages', 'read_at')) {
-                $query->whereNull('read_at');
-            } elseif (Schema::hasColumn('messages', 'is_read')) {
-                $query->where('is_read', false);
-            }
-
-            return $query->count();
-        }
-
-        return 0;
+        return \App\Services\DashboardActivityService::unread(auth()->user())->count();
     }
 
 

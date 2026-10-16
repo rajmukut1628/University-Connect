@@ -765,3 +765,52 @@ test('old conversation partners continue messaging without a current mentorship'
     $this->mentor->update(['is_blocked'=>true]);
     $this->post(route('messages.store',$this->mentor),['body'=>'Blocked partner'])->assertSessionHasErrors();
 });
+
+
+test('personal dashboard activities and counts contain only the signed in users records', function (string $role) {
+    $actor = $role === 'student' ? $this->student : $this->mentor;
+    $partner = $role === 'student' ? $this->mentor : $this->student;
+    permissionMentorship($this,'accepted');
+    $outsider = User::create(['name'=>'Unrelated Person','email'=>'activity-outsider@example.com','role'=>$partner->role,'is_active'=>true,'is_blocked'=>false]);
+    \App\Models\Mentorship::create(['student_id'=>$role === 'student' ? $actor->id : $outsider->id,'mentor_id'=>$role === 'student' ? $outsider->id : $actor->id,'status'=>'rejected','title'=>'Rejected request']);
+    $mine = permissionPost('event',$this->other); $mine->update(['title'=>'My registered workshop']);
+    $otherEvent = permissionPost('event',$this->other); $otherEvent->update(['title'=>'Unrelated workshop']);
+    \App\Models\EventParticipant::create(['event_id'=>$mine->id,'user_id'=>$actor->id,'status'=>'approved']);
+    \App\Models\EventParticipant::create(['event_id'=>$otherEvent->id,'user_id'=>$this->other->id,'status'=>'approved']);
+    $unread = Message::create(['sender_id'=>$partner->id,'recipient_id'=>$actor->id,'content'=>'Unread guidance','is_read'=>false]);
+    Message::create(['sender_id'=>$outsider->id,'recipient_id'=>$actor->id,'content'=>'Already read','is_read'=>true,'read_at'=>now()]);
+    Message::create(['sender_id'=>$outsider->id,'recipient_id'=>$actor->id,'content'=>'Deleted unread','is_read'=>false,'deleted_by_receiver'=>true]);
+    Message::create(['sender_id'=>$actor->id,'recipient_id'=>$outsider->id,'content'=>'Outgoing unread','is_read'=>false]);
+    $dashboard = $this->actingAs($actor)->get(route($role.'.dashboard'))->assertOk();
+    expect($dashboard->viewData('stats')['mentorship_requests'])->toBe(1)->and($dashboard->viewData('stats')['unread_messages'])->toBe(1);
+    if ($role === 'student') expect($dashboard->viewData('stats')['total_events'])->toBe(1);
+    foreach (['mentorships','unread'] as $section) $dashboard->assertSee(route('dashboard.activity',['section'=>$section]),false);
+    $this->get(route('dashboard.activity',['section'=>'events']))->assertOk()->assertSee('My registered workshop')->assertDontSee('Unrelated workshop');
+    $this->get(route('dashboard.activity',['section'=>'mentorships']))->assertOk()->assertSee($partner->name)->assertDontSee($outsider->name);
+    $this->get(route('dashboard.activity',['section'=>'unread']))->assertOk()->assertSee($partner->name)->assertDontSee($outsider->name);
+    $this->get(route('messages.show',$partner))->assertOk();
+    expect($unread->fresh()->is_read)->toBeTrue();
+    $this->get(route('dashboard.activity',['section'=>'unread']))->assertOk()->assertSee('You have no unread messages.');
+    expect($this->get(route($role.'.dashboard'))->viewData('stats')['unread_messages'])->toBe(0);
+})->with(['student','alumni']);
+
+test('empty personal dashboard activities show zero and honest empty states', function () {
+    $this->actingAs($this->student);
+    $stats = $this->get(route('student.dashboard'))->assertOk()->viewData('stats');
+    expect($stats['total_events'])->toBe(0)->and($stats['mentorship_requests'])->toBe(0)->and($stats['unread_messages'])->toBe(0);
+    foreach (['events','mentorships','unread'] as $section) {
+        $response=$this->get(route('dashboard.activity',['section'=>$section]))->assertOk();
+        expect($response->viewData('items')->total())->toBe(0);
+    }
+});
+
+
+test('alumni pending mentorship list excludes unrelated requests and active connections', function () {
+    $pendingStudent = User::create(['name'=>'Waiting Applicant','email'=>'pending-student@example.com','role'=>'student','is_active'=>true,'is_blocked'=>false]);
+    permissionMentorship($this,'accepted');
+    Mentorship::create(['student_id'=>$pendingStudent->id,'mentor_id'=>$this->mentor->id,'status'=>'pending','title'=>'Pending']);
+    $this->actingAs($this->mentor)->get(route('dashboard.activity',['section'=>'mentorships','status'=>'pending']))->assertOk()->assertSee($pendingStudent->name)->assertDontSee($this->student->name);
+    $this->get(route('dashboard.activity',['section'=>'mentorships']))->assertOk()->assertSee($this->student->name)->assertDontSee($pendingStudent->name);
+    $admin = User::create(['name'=>'Admin','email'=>'activity-admin@example.com','role'=>'admin','is_active'=>true,'is_blocked'=>false]);
+    $this->actingAs($admin)->get(route('dashboard.activity',['section'=>'unread']))->assertForbidden();
+});

@@ -207,7 +207,7 @@
 
             {{-- MENTORSHIP --}}
 
-            <div class="uc-card p-6">
+            <a href="{{ route('dashboard.activity', ['section'=>'mentorships']) }}" class="uc-card block p-6">
 
                 <div class="flex
                             items-center
@@ -220,7 +220,7 @@
                                   text-slate-500
                                   dark:text-slate-300">
 
-                            Mentorship Requests
+                            My Mentees
 
                         </p>
 
@@ -259,12 +259,12 @@
 
                 </div>
 
-            </div>
+            </a>
 
 
             {{-- MESSAGES --}}
 
-            <div class="uc-card p-6">
+            <a href="{{ route('dashboard.activity', ['section'=>'unread']) }}" class="uc-card block p-6">
 
                 <div class="flex
                             items-center
@@ -315,7 +315,7 @@
 
                 </div>
 
-            </div>
+            </a>
 
 
             {{-- NOTIFICATIONS --}}

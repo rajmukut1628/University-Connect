@@ -214,7 +214,7 @@
 
             {{-- Events --}}
 
-            <a href="{{ route('events.index') }}"
+            <a href="{{ route('dashboard.activity', ['section'=>'events']) }}"
                class="group
                       rounded-[24px]
                       border border-white/10
@@ -238,7 +238,7 @@
                                   text-slate-500
                                   dark:text-slate-400">
 
-                            Events
+                            My Events
 
                         </p>
 
@@ -278,7 +278,7 @@
 
             {{-- Mentorship --}}
 
-            <a href="{{ route('mentors.index') }}"
+            <a href="{{ route('dashboard.activity', ['section'=>'mentorships']) }}"
                class="group
                       rounded-[24px]
                       border border-white/10
@@ -302,7 +302,7 @@
                                   text-slate-500
                                   dark:text-slate-400">
 
-                            Mentorships
+                            My Mentorships
 
                         </p>
 
@@ -342,7 +342,7 @@
 
             {{-- Messages --}}
 
-            <a href="{{ url('/messages') }}"
+            <a href="{{ route('dashboard.activity', ['section'=>'unread']) }}"
                class="group
                       rounded-[24px]
                       border border-white/10

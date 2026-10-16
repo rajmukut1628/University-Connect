@@ -774,6 +774,8 @@ Route::middleware(['role:student'])
         [NewsfeedController::class, 'index']
     )->name('newsfeed.index');
 
+    Route::get('/dashboard/activity/{section}', [\App\Http\Controllers\DashboardActivityController::class, 'index'])->whereIn('section', ['events','mentorships','unread'])->middleware('role:student,alumni')->name('dashboard.activity');
+
     Route::get('/donations/{donation}/management', [DonationController::class, 'management'])->name('donations.management');
 
     Route::patch('/newsfeed/interests', [\App\Http\Controllers\FeedInterestController::class, 'update'])
