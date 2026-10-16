@@ -814,3 +814,33 @@ test('alumni pending mentorship list excludes unrelated requests and active conn
     $admin = User::create(['name'=>'Admin','email'=>'activity-admin@example.com','role'=>'admin','is_active'=>true,'is_blocked'=>false]);
     $this->actingAs($admin)->get(route('dashboard.activity',['section'=>'unread']))->assertForbidden();
 });
+
+
+test('job view and deletion tolerate missing extension storage without granting new permissions', function (string $role) {
+    \Illuminate\Support\Facades\Schema::drop('post_extension_requests');
+    $post = permissionPost('job',$this->mentor);
+    $actor = match($role) {
+        'owner'=>$this->mentor,
+        'student'=>$this->student,
+        'alumni'=>$this->other,
+        default=>User::create(['name'=>'Job Manager','email'=>'job-manager@example.com','role'=>$role,'is_active'=>true,'is_blocked'=>false]),
+    };
+    $this->actingAs($actor)->get(route('jobs.show',$post))->assertOk()->assertSee($post->title)->assertDontSee('Apply Date Extension');
+    $response=$this->delete(route('posts.destroy',['type'=>'job','id'=>$post->id]));
+    if (in_array($role,['owner','admin','super_admin'],true)) {
+        $response->assertRedirect(route('newsfeed.index'));
+        expect($post->fresh())->toBeNull();
+    } else {
+        $response->assertForbidden();
+        expect($post->fresh())->not->toBeNull();
+    }
+})->with(['owner','student','alumni','admin','super_admin']);
+
+test('post lifecycle migration recovers missing tables when archive columns already exist', function () {
+    \Illuminate\Support\Facades\Schema::drop('post_extension_requests');
+    $migration=require database_path('migrations/2026_10_13_140000_add_post_archives_and_extension_requests.php');
+    $migration->up();
+    expect(\Illuminate\Support\Facades\Schema::hasTable('post_extension_requests'))->toBeTrue();
+    $migration->up();
+    expect(\Illuminate\Support\Facades\Schema::hasColumn('job_postings','archived_at'))->toBeTrue();
+});

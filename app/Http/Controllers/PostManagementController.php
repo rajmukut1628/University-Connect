@@ -114,7 +114,9 @@ class PostManagementController extends Controller
         $post = $this->post($type, $id);
         $image = $post->{match ($type) { 'job' => 'job_image', 'event' => 'cover_image', 'donation' => 'image' }};
         \Illuminate\Support\Facades\DB::transaction(function () use ($type, $post) {
-            \App\Models\PostExtensionRequest::where('post_type', $type)->where('post_id', $post->id)->delete();
+            if (\Illuminate\Support\Facades\Schema::hasTable('post_extension_requests')) {
+                \App\Models\PostExtensionRequest::where('post_type', $type)->where('post_id', $post->id)->delete();
+            }
             $post->delete();
         });
         app(EncryptedFileService::class)->delete($image);

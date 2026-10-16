@@ -3,19 +3,21 @@
     @php
         $managedPost = $post ?? (\App\Services\PostLifecycleService::TYPES[$type])::findOrFail($postId);
         $isOwner = (int) auth()->id() === (int) $ownerId;
-        $pendingExtension = \App\Models\PostExtensionRequest::where('post_type', $type)->where('post_id', $postId)->where('status', 'pending')->first();
+        $extensionsReady = \Illuminate\Support\Facades\Schema::hasTable('post_extension_requests');
+        $archiveReady = \Illuminate\Support\Facades\Schema::hasColumn($managedPost->getTable(), 'archived_at');
+        $pendingExtension = $extensionsReady ? \App\Models\PostExtensionRequest::where('post_type', $type)->where('post_id', $postId)->where('status', 'pending')->first() : null;
     @endphp
     <div class="flex flex-wrap items-center gap-3 py-3">
         <a href="{{ route('posts.edit', ['type' => $type, 'id' => $postId]) }}" class="rounded-xl bg-indigo-600 px-4 py-2 font-bold text-white">Edit / Update</a>
-        @if($isOwner && !$pendingExtension)
+        @if($isOwner && $extensionsReady && $archiveReady && !$pendingExtension)
         <a href="{{ route('posts.extension.form', ['type'=>$type,'id'=>$postId]) }}" class="rounded-xl bg-amber-600 px-4 py-2 font-bold text-white">Apply Date Extension</a>
-        @elseif($isOwner)
+        @elseif($isOwner && $pendingExtension)
             <span class="rounded-xl bg-amber-500/10 px-4 py-2 text-amber-300">Extension Pending</span>
         @endif
         <details class="rounded-xl border border-white/10 p-3"><summary class="cursor-pointer font-bold">Manage Post</summary><div class="mt-3 flex flex-wrap gap-3">
-        @if(!$managedPost->archived_at)
+        @if($archiveReady && !$managedPost->archived_at)
         <form method="POST" action="{{ route('posts.archive.store', ['type'=>$type,'id'=>$postId]) }}" onsubmit="return confirm('Move this post to archive?')">@csrf @method('PATCH')<button type="submit" class="rounded-xl bg-slate-700 px-4 py-2 font-bold text-white">Move to Archive</button></form>
-        @else
+        @elseif($managedPost->archived_at)
             <span class="rounded-xl bg-slate-700 px-4 py-2 text-white">Already Archived</span>
         @endif
         <form method="POST" action="{{ route('posts.destroy', ['type' => $type, 'id' => $postId]) }}" onsubmit="return confirm('Delete this post permanently?')">

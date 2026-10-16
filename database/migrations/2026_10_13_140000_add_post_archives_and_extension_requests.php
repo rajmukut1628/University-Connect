@@ -8,9 +8,11 @@ return new class extends Migration {
     public function up(): void
     {
         foreach (['job_postings', 'events', 'donations'] as $name) {
-            Schema::table($name, fn (Blueprint $table) => $table->timestamp('archived_at')->nullable()->index());
+            if (!Schema::hasColumn($name, 'archived_at')) {
+                Schema::table($name, fn (Blueprint $table) => $table->timestamp('archived_at')->nullable()->index());
+            }
         }
-        Schema::create('post_extension_requests', function (Blueprint $table) {
+        if (!Schema::hasTable('post_extension_requests')) Schema::create('post_extension_requests', function (Blueprint $table) {
             $table->id();
             $table->string('post_type', 20);
             $table->unsignedBigInteger('post_id');
@@ -24,7 +26,7 @@ return new class extends Migration {
             $table->timestamps();
             $table->index(['post_type', 'post_id', 'status']);
         });
-        Schema::create('donation_card_payments', function (Blueprint $table) {
+        if (!Schema::hasTable('donation_card_payments')) Schema::create('donation_card_payments', function (Blueprint $table) {
             $table->id();
             $table->string('session_id')->unique();
             $table->foreignId('donation_id')->constrained()->cascadeOnDelete();
