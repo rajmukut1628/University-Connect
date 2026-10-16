@@ -373,7 +373,7 @@ test('mentorship must currently be accepted to send or attach messages', functio
     $this->actingAs($this->student)->post(route('messages.store', $this->mentor), ['body' => 'Hello', 'attachment' => UploadedFile::fake()->create('notes.txt', 1)]) ->assertForbidden();
     expect(Message::count())->toBe(0)->and(Storage::disk('local')->allFiles())->toBe([]);
     $this->get(route('messages.show', $this->mentor))->assertForbidden();
-})->with(['pending', 'rejected', 'completed']);
+})->with(['pending', 'rejected']);
 
 test('accepted student and mentor can message each other but no other account', function () {
     permissionMentorship($this);
@@ -383,13 +383,14 @@ test('accepted student and mentor can message each other but no other account', 
     expect(Message::count())->toBe(2);
 });
 
-test('completed conversations are readable but cannot be edited or resumed', function () {
+test('completed conversations remain readable and can be resumed', function () {
     permissionMentorship($this, 'completed');
     $message = Message::create(['sender_id' => $this->student->id, 'recipient_id' => $this->mentor->id, 'content' => 'Old conversation']);
-    $this->actingAs($this->student)->get(route('messages.show', $this->mentor))->assertOk()->assertSee('Old conversation')->assertSee('Messaging is locked.');
+    $this->actingAs($this->student)->get(route('messages.show', $this->mentor))->assertOk()->assertSee('Old conversation')->assertDontSee('<fieldset disabled', false);
     $this->get(route('messages.index'))->assertOk()->assertSee($this->mentor->name);
-    $this->patch(route('messages.update', $message), ['body' => 'Changed'])->assertForbidden();
-    expect($message->fresh()->content)->toBe('Old conversation');
+    $this->patch(route('messages.update', $message), ['body' => 'Changed'])->assertRedirect()->assertSessionHasNoErrors();
+    expect($message->fresh()->content)->toBe('Changed');
+    $this->post(route('messages.store', $this->mentor), ['body'=>'Continuing our conversation'])->assertRedirect();
 });
 
 test('blocked mentorship partners cannot communicate', function () {
@@ -458,8 +459,8 @@ test('a retained post image is not erased when editing without a new upload', fu
     Storage::disk('public')->assertExists('jobs/old.png');
 });
 
-test('completed mentorship cannot be bypassed through the call endpoint', function () {
-    permissionMentorship($this, 'completed');
+test('pending mentorship cannot be bypassed through the call endpoint', function () {
+    permissionMentorship($this, 'pending');
     $this->actingAs($this->student)->post(route('calls.start', $this->mentor), ['type' => 'video'])->assertForbidden();
 });
 
@@ -746,3 +747,21 @@ test('post feature lists paginate six posts without empty grid items', function 
     if ($type === 'event') $first->assertDontSee('<span id="event-list">',false);
     if ($type === 'donation') expect($second->viewData('stats')['total'])->toBe(7);
 })->with(['job','event','donation']);
+
+
+test('mentor card opens accepted and completed mentor conversations directly', function (string $status) {
+    permissionMentorship($this,$status);
+    $this->actingAs($this->student)->get(route('mentors.index'))->assertOk()->assertSee(route('messages.show',$this->mentor),false);
+    $this->get(route('messages.show',$this->mentor))->assertOk()->assertDontSee('<fieldset disabled', false);
+    $this->post(route('messages.store',$this->mentor),['body'=>'Mentor guidance please'])->assertRedirect();
+    $this->get(route('profiles.alumni.show',$this->mentor))->assertOk()->assertDontSee('Send Message');
+})->with(['accepted','completed']);
+
+test('old conversation partners continue messaging without a current mentorship', function () {
+    Message::create(['sender_id'=>$this->mentor->id,'recipient_id'=>$this->student->id,'content'=>'Earlier discussion']);
+    $this->actingAs($this->student)->post(route('messages.store',$this->mentor),['body'=>'Continue please'])->assertRedirect();
+    $this->actingAs($this->mentor)->post(route('messages.store',$this->student),['body'=>'Of course'])->assertRedirect();
+    $this->actingAs($this->student)->post(route('messages.store',$this->other),['body'=>'Unrelated'])->assertForbidden();
+    $this->mentor->update(['is_blocked'=>true]);
+    $this->post(route('messages.store',$this->mentor),['body'=>'Blocked partner'])->assertSessionHasErrors();
+});

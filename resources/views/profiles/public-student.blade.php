@@ -144,7 +144,7 @@
                         Back
                     </a>
 
-                    <x-message-link :user="$profileUser" />
+
                 </div>
 
             </div>

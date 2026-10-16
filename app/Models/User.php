@@ -105,6 +105,13 @@ class User extends Authenticatable
         if (!$this->is_active || $this->is_blocked || !$otherUser->is_active || $otherUser->is_blocked) {
             return false;
         }
+        if ((int) $this->id === (int) $otherUser->id) return false;
+        // An existing conversation remains available after mentorship ends.
+        if (Message::where(function ($query) use ($otherUser) {
+            $query->where('sender_id', $this->id)->where('recipient_id', $otherUser->id);
+        })->orWhere(function ($query) use ($otherUser) {
+            $query->where('sender_id', $otherUser->id)->where('recipient_id', $this->id);
+        })->exists()) return true;
         if ($this->role === 'student' && $otherUser->role === 'alumni') {
             $studentId = $this->id;
             $mentorId = $otherUser->id;
@@ -116,7 +123,7 @@ class User extends Authenticatable
         }
 
         return Mentorship::where('student_id', $studentId)->where('mentor_id', $mentorId)
-            ->where('status', 'accepted')->exists();
+            ->whereIn('status', ['accepted', 'completed'])->exists();
     }
 
     public static function unblockExpiredAccounts(): int

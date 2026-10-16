@@ -459,7 +459,7 @@
                     </a>
 
                     @if(auth()->id() !== $profileUser->id)
-                        <x-message-link :user="$profileUser" />
+
                     @endif
 
                 </div>

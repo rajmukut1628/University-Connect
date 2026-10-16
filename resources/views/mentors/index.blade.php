@@ -642,7 +642,9 @@
 
                             {{-- NO REQUEST --}}
 
-                            @if(!$status)
+                            @if(auth()->user()->canMessage($mentor))
+                                <a href="{{ route('messages.show', $mentor) }}" class="uc-button block w-full rounded-2xl bg-indigo-600 py-3 text-center font-black text-white"><i class="fas fa-comment-dots mr-2"></i>Message</a>
+                            @elseif(!$status)
 
                                 <form
                                     method="POST"
